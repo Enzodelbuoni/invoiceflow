@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ChevronsUpDownIcon, LogOutIcon, SettingsIcon, UserRoundIcon } from "lucide-react"
 import { toast } from "sonner"
 
@@ -20,6 +21,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { signOut } from "@/lib/auth/client"
 
 function getInitials(name) {
   return name
@@ -43,6 +45,17 @@ function UserAvatar({ name }) {
 /** Cartão do usuário no rodapé da sidebar, com menu de conta. */
 export function NavUser({ user }) {
   const { isMobile } = useSidebar()
+  const router = useRouter()
+
+  async function handleSignOut() {
+    try {
+      await signOut()
+      toast.success("Você saiu da sua conta.")
+      router.push("/login")
+    } catch {
+      toast.error("Não foi possível sair agora. Tente novamente.")
+    }
+  }
 
   return (
     <SidebarMenu>
@@ -92,13 +105,7 @@ export function NavUser({ user }) {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            {/* TODO(Sprint 3): chamar o logout do Supabase. */}
-            <DropdownMenuItem
-              variant="destructive"
-              onSelect={() =>
-                toast.info("Em breve", { description: "O login e o logout chegam na próxima fase." })
-              }
-            >
+            <DropdownMenuItem variant="destructive" onSelect={handleSignOut}>
               <LogOutIcon />
               Sair
             </DropdownMenuItem>

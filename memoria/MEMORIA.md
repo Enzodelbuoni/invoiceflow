@@ -26,21 +26,30 @@ SaaS para freelancers criarem propostas/orçamentos profissionais: clientes, ser
 
 - **Data da última atualização:** 2026-10-06
 - **Local do projeto:** `C:\dev\invoiceflow` (movido para fora do OneDrive na etapa 2 — o caminho antigo em `OneDrive\Área de Trabalho\meus-projetos\invoiceflow` não deve mais ser usado)
-- **Fase:** 1 — Setup & Design System concluída (falta só o Supabase do usuário) → próxima: Fase 2
-- **Concluído:** Sprint 1 (inicialização), exceto criação do projeto Supabase, que depende do usuário. Sprint 2 completo: identidade visual, componentes shadcn, layout da área privada (sidebar inset + header + Sheet no mobile), `StatusBadge`, `EmptyState`, `PageHeader`, tipografia e motion.
-- **Build:** `npm run lint` ✅ · `npm run build` ✅ · `npm run dev` ✅ — área privada em http://localhost:3000/dashboard, vitrine em http://localhost:3000/design-system
+- **Fase:** 2 — Autenticação & Clientes/Serviços (Sprint 3 em andamento)
+- **Concluído:** Sprint 1 (inicialização), exceto criação do projeto Supabase, que depende do usuário. Sprint 2 completo: identidade visual, componentes shadcn, layout da área privada (sidebar inset + header + Sheet no mobile), `StatusBadge`, `EmptyState`, `PageHeader`, tipografia e motion. Sprint 3 **parte 1**: telas de login, cadastro, recuperação e nova senha (RHF + Zod), com autenticação **simulada** (`AUTH_DEMO_MODE`).
+- **Build:** `npm run lint` ✅ · `npm run build` ✅ · `npm run dev` ✅. Rotas: `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/dashboard` (área privada) e `/design-system` (vitrine, só em dev).
+- **Backend:** **Supabase** (Auth + PostgreSQL + RLS). O usuário cogitou Firebase, comparamos e ele decidiu manter o Supabase (2026-10-06). **Ele nunca usou Supabase**: explicar os passos com calma. Guia de criação em `docs/guia-supabase.md`.
 
 ## Próximo passo
 
-**Sprint 3 — Autenticação.** Dividir em duas etapas, porque a segunda depende do Supabase do usuário:
-1. **Etapa 05 (não depende do Supabase):** telas de `(auth)`: `/login`, `/signup`, `/forgot-password`, `/reset-password`, com layout próprio (painel de marca + formulário), React Hook Form + Zod (schemas em `src/lib/validations/auth.js`), mensagens em pt-BR, estados de loading e erro, e o mesmo padrão visual da etapa 04 (serif nos títulos, motion, temas). Ver se vale usar o componente `field` do shadcn para os formulários.
-2. **Etapa 06 (exige `.env.local`):** Server Actions com Supabase Auth, `src/proxy.js` + `src/lib/supabase/proxy.js` protegendo `/dashboard`, `/clients`, `/services`, `/quotes` e `/settings`, tabela `profiles` + trigger, logout real no `NavUser` e troca do `PLACEHOLDER_USER` em `src/app/(dashboard)/layout.js` pelo usuário real.
+**Etapa 06 — Sprint 3 (parte 2): conectar o Supabase Auth.** Depende do usuário seguir `docs/guia-supabase.md` e preencher o `.env.local`.
+1. Conferir o `.env.local` **sem imprimir valores** (só presença e formato: URL `https://*.supabase.co`, chave começando com `sb_publishable_`).
+2. **Ler antes** a documentação atual do `@supabase/ssr` para Next.js 16: o arquivo é `src/proxy.js` (função `proxy`) + helper `src/lib/supabase/proxy.js`, que renova a sessão com `supabase.auth.getClaims()`. Para autorização no servidor usar **`getClaims()`**, nunca `getSession()`.
+3. Trocar o miolo de `src/lib/auth/client.js` pelo Supabase (manter a interface `signIn/signUp/signOut/requestPasswordReset/confirmPasswordReset` + `AuthError`), mapear os erros do Supabase (`invalid_credentials`, `user_already_exists`, `weak_password`, `over_email_send_rate_limit`, `same_password`…) para mensagens pt-BR e pôr `AUTH_DEMO_MODE = false`. Avaliar se login e cadastro ficam no cliente ou viram Server Actions.
+4. Rota `src/app/auth/confirm/route.js` com `verifyOtp({ type, token_hash })`: sucesso → redireciona para `next` (**validar que é caminho relativo**, para não virar open redirect); falha → `/reset-password?erro=link-invalido` (ou `/login` com erro, se for confirmação de cadastro). Os templates de e-mail do guia já apontam para essa rota.
+5. `/reset-password`: mostrar "link inválido" também quando não houver sessão. Após trocar a senha o usuário já está logado, então decidir entre ir para `/dashboard` ou deslogar e mandar para `/login`.
+6. Cadastro: `signUp` com `options.data.full_name`. Se a confirmação de e-mail estiver ligada (`data.session === null`), mostrar o estado "Confirme seu e-mail" em vez de redirecionar. Hoje está **desligada** (ver pendências).
+7. Migração SQL: tabela `profiles` (id → `auth.users`, full_name, email, avatar_url, phone, timestamps), **RLS ligado** (o próprio usuário lê e edita só a sua linha), trigger `on auth.users insert` criando o profile. Guardar o SQL versionado (ex.: `supabase/migrations/`) e orientar o usuário a rodá-lo no **SQL Editor** do painel (passo a passo, porque ele é iniciante).
+8. Proteger `/dashboard`, `/clients`, `/services`, `/quotes` e `/settings` (sem sessão → `/login`); quem já está logado e abre `/login` ou `/signup` → `/dashboard`. Trocar o `PLACEHOLDER_USER` do `src/app/(dashboard)/layout.js` pelos dados reais.
 
-Também pendente (sem sprint próprio, mas o usuário achou básica): a **landing page `/`** continua provisória. Refazer com o mesmo padrão visual quando fizer sentido (antes do deploy, no máximo).
+Pendente também: a **landing page `/`** continua provisória (já tem título serif e botões de entrar/cadastrar). Refazer antes do deploy.
 
 ## Pendências com o usuário
 
-- [ ] **Criar projeto no Supabase** (supabase.com) e informar `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` → colocar em `.env.local` (copiar de `.env.example`). Necessário antes do Sprint 3 (Auth).
+- [ ] **Criar o projeto Supabase** seguindo `docs/guia-supabase.md` (passos 1–6: conta, organização, projeto em São Paulo, URL + publishable key, configuração de Auth e templates de e-mail em pt-BR) e preencher o `.env.local`. Necessário para a etapa 6. **Nunca pedir nem exibir os valores; a secret key não deve ser usada.**
+- [ ] **Antes do deploy:** configurar SMTP próprio (ex.: Resend) e religar "Confirm email". O e-mail padrão do Supabase só entrega para membros da equipe e no máximo 2 por hora.
+- [ ] **Antes do deploy:** evitar a pausa do plano Free (7 dias com pouca atividade), por exemplo com um ping agendado (GitHub Actions). Projeto pausado se reativa em **Resume project** (até 1 ano).
 - [x] ~~Projeto dentro do OneDrive~~ → resolvido na etapa 2 (movido para `C:\dev\invoiceflow`).
 - [ ] Criar repositório remoto no GitHub (opcional, quando o usuário quiser).
 - [ ] (Opcional, requer admin) Adicionar `C:\dev` às exclusões do Windows Defender para acelerar `npm install`/build. Não foi feito — só sugerido.
@@ -56,7 +65,9 @@ Também pendente (sem sprint próprio, mas o usuário achou básica): a **landin
   - O helper `cn()` vem do pacote `cn` (substituto de clsx + tailwind-merge, mantido pelo shadcn): `src/lib/utils.js`.
   - O pacote `shadcn` fica em `dependencies` porque o `globals.css` importa `shadcn/tailwind.css`.
 - **Tailwind v4** — configuração via CSS (`@theme inline` no `globals.css`), sem `tailwind.config.js`.
-- **Supabase:** `@supabase/ssr` com `getAll`/`setAll`. Variáveis: `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (nova nomenclatura; a chave anon legada também funciona).
+- **Backend = Supabase (confirmado em 2026-10-06, depois de cogitar o Firebase).** Motivos: dados relacionais (dashboard, filtros e busca em SQL), regras de negócio atômicas no banco (aprovação, numeração, NUMERIC), integração SSR oficial com o Next.js (`@supabase/ssr`) e aderência ao plano e ao portfólio (PostgreSQL + RLS).
+- **Autenticação no front (etapa 5):** formulários só usam `src/lib/auth/client.js` (`signIn`, `signUp`, `signOut`, `requestPasswordReset`, `confirmPasswordReset`, `AuthError`, `getAuthErrorMessage`). Schemas em `src/lib/validations/auth.js` (**Zod v4: usar `{ error: "..." }`**). Formulários com RHF + `zodResolver` + componentes `Field`/`FieldError` do shadcn, `mode: "onTouched"`.
+- **Supabase:** `@supabase/ssr` com `getAll`/`setAll`. Variáveis: `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (`sb_publishable_...`). As chaves legadas `anon`/`service_role` serão desativadas até o fim de 2026: usar só as novas. A **secret key** (`sb_secret_...`) ignora o RLS: nunca no front e, de preferência, em nenhum lugar (para a página pública, usar função SQL `security definer` que expõe só os campos necessários).
   - `src/lib/supabase/client.js` → browser · `src/lib/supabase/server.js` → servidor (`import "server-only"`) · `src/lib/supabase/env.js` → leitura/validação das env vars.
   - O helper do proxy de sessão será `src/lib/supabase/proxy.js` (o plano original chamava de `middleware.js`).
 - **Zod v4** + `@hookform/resolvers` v5 (compatível com Zod 4).
@@ -72,6 +83,10 @@ Também pendente (sem sprint próprio, mas o usuário achou básica): a **landin
   - Páginas privadas: usar `PageHeader` + seções como filhos diretos (o `template.js` faz o stagger de entrada). Listas vazias usam `EmptyState`. Status sempre via `StatusBadge` + `src/lib/constants/quote-status.js`.
   - Ação ainda não implementada → `ComingSoonButton` (toast), nunca um link para 404.
   - Formatação pt-BR (moeda, %, data) em `src/lib/format.js`.
+  - Componente com troca animada (`AnimatePresence`) **não** deve ser filho direto de um `template.js` (o `*:animate-enter` se soma à animação do motion): envolver num `<div>`.
+  - Atraso de animação isolado → `style={{ animationDelay }}` (classe `[animation-delay:...]` pode perder para o atalho `animation` do `animate-enter`).
+  - shadcn CLI: para não sobrescrever arquivos customizados (ex.: `button.jsx`), rodar `printf 'n
+' | npx shadcn add <comp>`. Depois converter CRLF → LF.
 - **Rotas com route groups:** `(public)`, `(auth)`, `(dashboard)` conforme o plano. A home está em `src/app/(public)/page.js`.
 - **Finais de linha:** `.gitattributes` força LF; `.vscode/settings.json` usa `files.eol: "\n"`.
 - **VS Code do projeto** (`.vscode/settings.json`): `*.css` associado a `tailwindcss` (evita falsos avisos de `@theme`/`@apply`), autocomplete de classes em `cn()`/`cva()`, `.next` fora da busca/watcher. Extensões recomendadas: Tailwind CSS IntelliSense, ESLint, Prettier (o usuário já tem as três).
@@ -81,6 +96,7 @@ Também pendente (sem sprint próprio, mas o usuário achou básica): a **landin
 ## Problemas conhecidos / avisos
 
 - `npm audit` acusa 5 vulnerabilidades "high" no pacote `braces` (via `fast-glob`/`micromatch`), usado apenas por ferramentas de dev (eslint-plugin-next e CLI do shadcn). Não vai para o bundle do navegador. Não rodar `npm audit fix --force` (quebraria versões).
+- Testes no Chrome: se `document.visibilityState === "hidden"` (janela em segundo plano), o clique não move o foco, o teclado não chega, os menus Radix não abrem e as animações só avançam com screenshot. Saídas: setter nativo + evento `input` para preencher campos, `PointerEvent('pointerdown')` para abrir menus Radix e `element.click()` nos itens.
 - Testes no Chrome (Claude in Chrome): o monitor do usuário é ultrawide (viewport ~3018 px CSS) e o screenshot vem reduzido, então **clicar por coordenada erra o alvo**. Usar refs do `find` ou `javascript_tool`. O `resize_window` não muda a viewport: para testar mobile, usar iframes de 390 px (e recarregar a aba depois, porque mexer no `<body>` quebra o React da página).
 - No Windows, ao parar o `npm run dev` em background, o processo `node` filho pode continuar escutando a porta 3000. Verificar com `Get-NetTCPConnection -LocalPort 3000 -State Listen`, conferir pela linha de comando (`Get-CimInstance Win32_Process`) que é o `next ... start-server.js` do invoiceflow e só então encerrar o PID.
 
@@ -92,6 +108,7 @@ Também pendente (sem sprint próprio, mas o usuário achou básica): a **landin
 | 2 | 2026-10-06 | Mudança para fora do OneDrive + ajustes de ambiente | [etapa-02-mudanca-de-pasta.md](etapas/etapa-02-mudanca-de-pasta.md) |
 | 3 | 2026-10-06 | Sprint 2 (parte 1) — identidade visual, componentes shadcn, providers, vitrine | [etapa-03-design-tokens.md](etapas/etapa-03-design-tokens.md) |
 | 4 | 2026-10-06 | Sprint 2 (parte 2) — layout da área privada, StatusBadge, EmptyState, tipografia e motion | [etapa-04-layout-e-polimento-visual.md](etapas/etapa-04-layout-e-polimento-visual.md) |
+| 5 | 2026-10-06 | Sprint 3 (parte 1) — telas de autenticação (modo demonstração) + guia do Supabase | [etapa-05-telas-de-autenticacao.md](etapas/etapa-05-telas-de-autenticacao.md) |
 
 ## Roadmap (do plano de desenvolvimento)
 
@@ -100,7 +117,7 @@ Também pendente (sem sprint próprio, mas o usuário achou básica): a **landin
 - [x] Sprint 2 — Design System + layout (sidebar/header/sheet mobile), StatusBadge, EmptyState, tipografia e motion
 
 **Fase 2 — Autenticação & Clientes/Serviços**
-- [ ] Sprint 3 — Autenticação (signup, login, logout, recuperação, proxy, profiles)
+- [ ] Sprint 3 — Autenticação (signup, login, logout, recuperação, proxy, profiles) — **parte 1 ✅** (telas + validação, auth simulada); falta a parte 2 (Supabase)
 - [ ] Sprint 4 — Clientes (CRUD, RHF + Zod)
 - [ ] Sprint 5 — Serviços (CRUD)
 
