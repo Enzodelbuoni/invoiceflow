@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# InvoiceFlow
 
-## Getting Started
+Ferramenta para freelancers criarem **propostas comerciais e orçamentos profissionais**, calcularem valores automaticamente, compartilharem um link público com o cliente e acompanharem aprovações.
 
-First, run the development server:
+> 🚧 Projeto em desenvolvimento — Fase 1 (Setup & Design System).
+
+## Stack
+
+| Camada        | Tecnologia                                      |
+| ------------- | ----------------------------------------------- |
+| Framework     | Next.js 16 (App Router, Turbopack) + React 19   |
+| Linguagem     | JavaScript (sem TypeScript)                     |
+| Estilo        | Tailwind CSS v4 + shadcn/ui (Radix, preset Nova) |
+| Formulários   | React Hook Form + Zod                           |
+| Estado de UI  | Zustand                                         |
+| Backend       | Supabase (Auth + PostgreSQL + RLS)              |
+
+## Como rodar
+
+Pré-requisito: Node.js 20.9 ou superior.
 
 ```bash
+npm install
+cp .env.example .env.local   # depois preencha com os dados do Supabase
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Acesse http://localhost:3000.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### Variáveis de ambiente
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variável                               | Descrição                                   |
+| -------------------------------------- | ------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | URL do projeto Supabase                     |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable key (ou a chave `anon` legada)  |
+| `NEXT_PUBLIC_SITE_URL`                 | URL pública da aplicação                    |
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+| Comando         | O que faz                     |
+| --------------- | ----------------------------- |
+| `npm run dev`   | Servidor de desenvolvimento   |
+| `npm run build` | Build de produção             |
+| `npm run start` | Sobe o build de produção      |
+| `npm run lint`  | ESLint                        |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Estrutura
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+├── app/            # Rotas, layouts e composição (App Router)
+│   └── (public)/   # Rotas públicas (landing, orçamento público)
+├── components/     # UI (components/ui = shadcn/ui)
+└── lib/
+    ├── supabase/   # Clientes Supabase (browser e servidor)
+    └── utils.js    # Helper cn() para classes Tailwind
+docs/               # Documentos de requisitos e plano de desenvolvimento
+memoria/            # Registro do andamento do projeto, etapa por etapa
+```
 
-## Deploy on Vercel
+## Documentação do projeto
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [`docs/info.txt`](docs/info.txt): conceito e funcionalidades
+- [`docs/InvoiceFlow_Plano_de_Desenvolvimento.txt`](docs/InvoiceFlow_Plano_de_Desenvolvimento.txt): roadmap completo por sprints
+- [`memoria/MEMORIA.md`](memoria/MEMORIA.md): estado atual e histórico do desenvolvimento

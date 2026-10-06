@@ -1,0 +1,6 @@
+# Mantém finais de linha LF no repositório e na cópia de trabalho (evita diffs CRLF/LF no Windows)
+* text=auto eol=lf
+*.ico binary
+*.png binary
+*.jpg binary
+*.woff2 binary
