@@ -26,18 +26,17 @@ SaaS para freelancers criarem propostas/orçamentos profissionais: clientes, ser
 
 - **Data da última atualização:** 2026-10-06
 - **Local do projeto:** `C:\dev\invoiceflow` (movido para fora do OneDrive na etapa 2 — o caminho antigo em `OneDrive\Área de Trabalho\meus-projetos\invoiceflow` não deve mais ser usado)
-- **Fase:** 1 — Setup & Design System (Sprint 2 em andamento)
-- **Concluído:** Sprint 1 (inicialização), exceto criação do projeto Supabase, que depende do usuário. Sprint 2 **parte 1** (identidade visual, 17 componentes shadcn, providers, vitrine `/design-system`).
-- **Build:** `npm run lint` ✅ · `npm run build` ✅ · `npm run dev` ✅ (página abre em http://localhost:3000)
+- **Fase:** 1 — Setup & Design System concluída (falta só o Supabase do usuário) → próxima: Fase 2
+- **Concluído:** Sprint 1 (inicialização), exceto criação do projeto Supabase, que depende do usuário. Sprint 2 completo: identidade visual, componentes shadcn, layout da área privada (sidebar inset + header + Sheet no mobile), `StatusBadge`, `EmptyState`, `PageHeader`, tipografia e motion.
+- **Build:** `npm run lint` ✅ · `npm run build` ✅ · `npm run dev` ✅ — área privada em http://localhost:3000/dashboard, vitrine em http://localhost:3000/design-system
 
 ## Próximo passo
 
-**Sprint 2 — Design System, parte 2 (etapa 04):**
-1. Constantes de status em `src/lib/constants/` (valor do banco → rótulo pt-BR, classes de cor, ícone Lucide). Status: draft, sent, viewed, approved, declined, expired, cancelled.
-2. `StatusBadge` (texto + fundo tingido + **ícone por status**, para não depender só da cor) e `EmptyState` em `src/components/shared/`. Mostrar os dois na vitrine `/design-system`.
-3. Layout da área privada em `src/app/(dashboard)/layout.js`: Sidebar (Dashboard, Clientes, Serviços, Orçamentos, Configurações) | Header (trigger da sidebar, título, alternar tema, menu do usuário provisório) | Conteúdo. No mobile a sidebar vira Sheet (o componente `sidebar` do shadcn já faz isso).
-4. Páginas placeholder para as rotas da sidebar (`/dashboard`, `/clients`, `/services`, `/quotes`, `/settings`) para testar a navegação.
-5. Depois disso, Sprint 2 concluído → Sprint 3 (Auth), que **exige o Supabase do usuário**.
+**Sprint 3 — Autenticação.** Dividir em duas etapas, porque a segunda depende do Supabase do usuário:
+1. **Etapa 05 (não depende do Supabase):** telas de `(auth)`: `/login`, `/signup`, `/forgot-password`, `/reset-password`, com layout próprio (painel de marca + formulário), React Hook Form + Zod (schemas em `src/lib/validations/auth.js`), mensagens em pt-BR, estados de loading e erro, e o mesmo padrão visual da etapa 04 (serif nos títulos, motion, temas). Ver se vale usar o componente `field` do shadcn para os formulários.
+2. **Etapa 06 (exige `.env.local`):** Server Actions com Supabase Auth, `src/proxy.js` + `src/lib/supabase/proxy.js` protegendo `/dashboard`, `/clients`, `/services`, `/quotes` e `/settings`, tabela `profiles` + trigger, logout real no `NavUser` e troca do `PLACEHOLDER_USER` em `src/app/(dashboard)/layout.js` pelo usuário real.
+
+Também pendente (sem sprint próprio, mas o usuário achou básica): a **landing page `/`** continua provisória. Refazer com o mesmo padrão visual quando fizer sentido (antes do deploy, no máximo).
 
 ## Pendências com o usuário
 
@@ -66,6 +65,13 @@ SaaS para freelancers criarem propostas/orçamentos profissionais: clientes, ser
 - **Toasts:** `import { toast } from "sonner"` (Toaster com `richColors`, canto superior direito).
 - **Lint do React 19** (`react-hooks/set-state-in-effect`): não chamar `setState` direto no corpo de `useEffect`. Preferir `useSyncExternalStore` para assinar APIs do navegador. O `src/hooks/use-mobile.js` do shadcn foi corrigido assim e precisa ser corrigido de novo se o shadcn o sobrescrever.
 - **Vitrine `/design-system`:** só em dev (`notFound()` em produção). Usar para validar componentes novos do Design System.
+- **Padrão visual (etapa 4) — o usuário exige acabamento caprichado, nada de shadcn cru:**
+  - Fontes: **Instrument Serif** (`font-display`, só peso 400, sem bold) para títulos, números de destaque e estados vazios; **Inter** (`font-sans`) para a interface; **Geist Mono** (`font-mono`) para códigos.
+  - Texto na cor da marca → `text-primary-ink` (não `text-primary`, que no escuro falha o contraste).
+  - Sombras `shadow-xs..xl` vêm de `--elevation-*` (por tema). Motion: `animate-enter`, `animate-float`, `ease-out-expo`. Biblioteca `motion` v14 (`motion/react`) para `layoutId`/`AnimatePresence`.
+  - Páginas privadas: usar `PageHeader` + seções como filhos diretos (o `template.js` faz o stagger de entrada). Listas vazias usam `EmptyState`. Status sempre via `StatusBadge` + `src/lib/constants/quote-status.js`.
+  - Ação ainda não implementada → `ComingSoonButton` (toast), nunca um link para 404.
+  - Formatação pt-BR (moeda, %, data) em `src/lib/format.js`.
 - **Rotas com route groups:** `(public)`, `(auth)`, `(dashboard)` conforme o plano. A home está em `src/app/(public)/page.js`.
 - **Finais de linha:** `.gitattributes` força LF; `.vscode/settings.json` usa `files.eol: "\n"`.
 - **VS Code do projeto** (`.vscode/settings.json`): `*.css` associado a `tailwindcss` (evita falsos avisos de `@theme`/`@apply`), autocomplete de classes em `cn()`/`cva()`, `.next` fora da busca/watcher. Extensões recomendadas: Tailwind CSS IntelliSense, ESLint, Prettier (o usuário já tem as três).
@@ -75,7 +81,7 @@ SaaS para freelancers criarem propostas/orçamentos profissionais: clientes, ser
 ## Problemas conhecidos / avisos
 
 - `npm audit` acusa 5 vulnerabilidades "high" no pacote `braces` (via `fast-glob`/`micromatch`), usado apenas por ferramentas de dev (eslint-plugin-next e CLI do shadcn). Não vai para o bundle do navegador. Não rodar `npm audit fix --force` (quebraria versões).
-- Testes no Chrome (Claude in Chrome): a viewport tem ~3018 px CSS e o screenshot vem reduzido, então **clicar por coordenada erra o alvo**. Usar `javascript_tool` (`element.click()`) ou refs do `find`/`read_page`.
+- Testes no Chrome (Claude in Chrome): o monitor do usuário é ultrawide (viewport ~3018 px CSS) e o screenshot vem reduzido, então **clicar por coordenada erra o alvo**. Usar refs do `find` ou `javascript_tool`. O `resize_window` não muda a viewport: para testar mobile, usar iframes de 390 px (e recarregar a aba depois, porque mexer no `<body>` quebra o React da página).
 - No Windows, ao parar o `npm run dev` em background, o processo `node` filho pode continuar escutando a porta 3000. Verificar com `Get-NetTCPConnection -LocalPort 3000 -State Listen`, conferir pela linha de comando (`Get-CimInstance Win32_Process`) que é o `next ... start-server.js` do invoiceflow e só então encerrar o PID.
 
 ## Histórico de etapas
@@ -85,12 +91,13 @@ SaaS para freelancers criarem propostas/orçamentos profissionais: clientes, ser
 | 1 | 2026-10-06 | Sprint 1 — Inicialização do projeto     | [etapa-01-setup.md](etapas/etapa-01-setup.md) |
 | 2 | 2026-10-06 | Mudança para fora do OneDrive + ajustes de ambiente | [etapa-02-mudanca-de-pasta.md](etapas/etapa-02-mudanca-de-pasta.md) |
 | 3 | 2026-10-06 | Sprint 2 (parte 1) — identidade visual, componentes shadcn, providers, vitrine | [etapa-03-design-tokens.md](etapas/etapa-03-design-tokens.md) |
+| 4 | 2026-10-06 | Sprint 2 (parte 2) — layout da área privada, StatusBadge, EmptyState, tipografia e motion | [etapa-04-layout-e-polimento-visual.md](etapas/etapa-04-layout-e-polimento-visual.md) |
 
 ## Roadmap (do plano de desenvolvimento)
 
 **Fase 1 — Setup & Design System**
 - [x] Sprint 1 — Inicialização (falta só o projeto Supabase do usuário)
-- [ ] Sprint 2 — Design System + layout (sidebar/header/sheet mobile) — **parte 1 ✅** (tokens + componentes), falta parte 2 (layout, StatusBadge, EmptyState)
+- [x] Sprint 2 — Design System + layout (sidebar/header/sheet mobile), StatusBadge, EmptyState, tipografia e motion
 
 **Fase 2 — Autenticação & Clientes/Serviços**
 - [ ] Sprint 3 — Autenticação (signup, login, logout, recuperação, proxy, profiles)

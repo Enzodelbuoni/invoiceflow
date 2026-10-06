@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation"
+import { InboxIcon, PlusIcon } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -31,25 +32,19 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
-import { ThemeDemo, ToastDemo } from "./demo-actions"
+import { LogoMark, LogoWordmark } from "@/components/brand/logo"
+import { ThemeToggle } from "@/components/layout/theme-toggle"
+import { EmptyState } from "@/components/shared/empty-state"
+import { StatusBadge } from "@/components/shared/status-badge"
+import { QUOTE_STATUS_VALUES } from "@/lib/constants/quote-status"
+import { ToastDemo } from "./demo-actions"
 
 export const metadata = { title: "Design System" }
-
-// Classes escritas por extenso para o Tailwind conseguir detectá-las.
-const STATUS_SWATCHES = [
-  { label: "Rascunho", className: "bg-status-draft/10 text-status-draft dark:bg-status-draft/15" },
-  { label: "Enviado", className: "bg-status-sent/10 text-status-sent dark:bg-status-sent/15" },
-  { label: "Visualizado", className: "bg-status-viewed/10 text-status-viewed dark:bg-status-viewed/15" },
-  { label: "Aprovado", className: "bg-status-approved/10 text-status-approved dark:bg-status-approved/15" },
-  { label: "Recusado", className: "bg-status-declined/10 text-status-declined dark:bg-status-declined/15" },
-  { label: "Expirado", className: "bg-status-expired/10 text-status-expired dark:bg-status-expired/15" },
-  { label: "Cancelado", className: "bg-status-cancelled/10 text-status-cancelled dark:bg-status-cancelled/15" },
-]
 
 function Section({ title, children }) {
   return (
     <section className="flex flex-col gap-4">
-      <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+      <h2 className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">{title}</h2>
       {children}
     </section>
   )
@@ -61,16 +56,38 @@ export default function DesignSystemPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-10 px-4 py-12 sm:px-6">
-      <header className="flex flex-col gap-2">
-        <span className="text-sm font-medium text-primary">InvoiceFlow</span>
-        <h1 className="text-3xl font-semibold tracking-tight">Design System</h1>
-        <p className="text-muted-foreground">
-          Vitrine dos componentes base. Visível apenas em desenvolvimento.
-        </p>
+      <header className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2.5">
+            <LogoMark />
+            <LogoWordmark />
+          </div>
+          <h1 className="font-display text-5xl leading-none tracking-[-0.01em]">Design System</h1>
+          <p className="text-muted-foreground">
+            Vitrine dos componentes base. Visível apenas em desenvolvimento.
+          </p>
+        </div>
+        <ThemeToggle />
       </header>
 
-      <Section title="Tema">
-        <ThemeDemo />
+      <Section title="Tipografia">
+        <div className="grid gap-6 rounded-xl border bg-card p-6 shadow-sm sm:grid-cols-3">
+          <div className="flex flex-col gap-1">
+            <span className="font-display text-4xl leading-none">Aa</span>
+            <span className="text-sm font-medium">Instrument Serif</span>
+            <span className="text-xs text-muted-foreground">Títulos de destaque · font-display</span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-4xl leading-none font-semibold tracking-tight">Aa</span>
+            <span className="text-sm font-medium">Inter</span>
+            <span className="text-xs text-muted-foreground">Interface e textos · font-sans</span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="font-mono text-4xl leading-none">#01</span>
+            <span className="text-sm font-medium">Geist Mono</span>
+            <span className="text-xs text-muted-foreground">Códigos e identificadores · font-mono</span>
+          </div>
+        </div>
       </Section>
 
       <Separator />
@@ -95,13 +112,13 @@ export default function DesignSystemPage() {
 
       <Section title="Status do orçamento">
         <div className="flex flex-wrap gap-2">
-          {STATUS_SWATCHES.map((s) => (
-            <span
-              key={s.label}
-              className={`inline-flex h-6 items-center rounded-full px-2.5 text-xs font-medium ${s.className}`}
-            >
-              {s.label}
-            </span>
+          {QUOTE_STATUS_VALUES.map((status) => (
+            <StatusBadge key={status} status={status} />
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {QUOTE_STATUS_VALUES.map((status) => (
+            <StatusBadge key={status} status={status} size="sm" />
           ))}
         </div>
         <div className="flex flex-wrap gap-2">
@@ -197,6 +214,20 @@ export default function DesignSystemPage() {
             <Skeleton className="h-4 w-32" />
           </div>
         </div>
+      </Section>
+
+      <Section title="Estado vazio">
+        <EmptyState
+          icon={InboxIcon}
+          title="Nada por aqui ainda"
+          description="Use este componente sempre que uma lista ou seção não tiver conteúdo, com uma ação clara para começar."
+        >
+          <Button>
+            <PlusIcon data-icon="inline-start" />
+            Ação principal
+          </Button>
+          <Button variant="outline">Secundária</Button>
+        </EmptyState>
       </Section>
 
       <Section title="Feedback (toast)">
