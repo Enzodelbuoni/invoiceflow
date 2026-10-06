@@ -1,0 +1,689 @@
+INVOICEFLOW PLANO DE DESENVOLVIMENTO — ROADMAP / SPRINT PLAN
+
+Stack: - React - JavaScript - Next.js com App Router - Tailwind CSS -
+shadcn/ui - React Hook Form - Zod - Zustand - Supabase (Auth +
+PostgreSQL + Storage quando necessário)
+
+IMPORTANTE: este plano foi adaptado para JavaScript. TypeScript não faz
+parte do projeto.
+
+======================================================================
+0. PRINCÍPIOS DE ARQUITETURA
+======================================================================
+
+1.  Separar UI, regras de negócio, acesso a dados e estado.
+2.  Usar Server Components por padrão no Next.js e Client Components
+    somente quando houver interatividade.
+3.  Centralizar cálculos de orçamento em funções puras e testáveis.
+4.  Usar Supabase como fonte persistente dos dados.
+5.  Usar Zustand principalmente para estado temporário/interativo.
+6.  Proteger dados privados com Row Level Security (RLS).
+7.  Tratar orçamento enviado/aprovado como documento que não pode ser
+    alterado silenciosamente.
+8.  Construir primeiro o fluxo funcional completo e depois adicionar
+    diferenciais.
+
+====================================================================== 1.
+MAPA DE TELAS E ROTAS
+======================================================================
+
+ROTAS PÚBLICAS
+
+/ Landing Page - Apresentação do InvoiceFlow. - Benefícios. - CTA para
+cadastro/login.
+
+/quote/[publicId] Orçamento público - Cliente visualiza o orçamento sem
+possuir conta.
+
+/quote/[publicId]/approved - Confirmação após aprovação.
+
+/quote/[publicId]/declined - Confirmação após recusa.
+
+ROTAS DE AUTENTICAÇÃO
+
+/login - Login.
+
+/signup - Cadastro.
+
+/forgot-password - Solicitação de recuperação.
+
+/reset-password - Definição de nova senha.
+
+ÁREA PRIVADA
+
+/dashboard - Dashboard geral.
+
+/clients - Lista de clientes.
+
+/clients/new - Cadastro de cliente.
+
+/clients/[id] - Detalhes do cliente.
+
+/clients/[id]/edit - Edição.
+
+/services - Lista de serviços.
+
+/services/new - Cadastro de serviço.
+
+/services/[id]/edit - Edição de serviço.
+
+/quotes - Lista de orçamentos.
+
+/quotes/new - Construtor de orçamento.
+
+/quotes/[id] - Visualização interna.
+
+/quotes/[id]/edit - Edição somente quando o status permitir.
+
+/settings - Configurações gerais.
+
+/settings/profile - Perfil.
+
+/settings/business - Dados da empresa/freelancer.
+
+/settings/branding - Logo, cores e identidade visual.
+
+FLUXO PRINCIPAL
+
+Cadastro/Login ↓ Dashboard ↓ Cadastrar cliente + serviços ↓ Novo
+orçamento ↓ Selecionar cliente ↓ Adicionar itens ↓ Calcular
+subtotal/desconto/impostos/total ↓ Salvar rascunho ↓ Preview ↓ Enviar ↓
+URL pública ↓ Cliente visualiza ↓ Aprova ou recusa ↓ Métrica atualizada
+
+======================================================================
+2. MODELAGEM DE DADOS — SUPABASE / POSTGRESQL
+======================================================================
+
+REGRA ARQUITETURAL MAIS IMPORTANTE
+
+O orçamento deve preservar os dados usados no momento em que foi criado.
+
+Exemplo: - Hoje o serviço custa R$ 500. - Um orçamento é criado por R$
+500. - Amanhã o serviço passa a custar R$ 800. - O orçamento antigo
+continua mostrando R$ 500.
+
+Por isso quote_items deve guardar um snapshot dos dados.
+
+2.1 profiles
+
+profiles
+
+id UUID PK full_name TEXT email TEXT avatar_url TEXT NULL phone TEXT
+NULL created_at TIMESTAMP updated_at TIMESTAMP
+
+Relacionamento: auth.users 1:1 profiles
+
+2.2 clients
+
+clients
+
+id UUID PK user_id UUID FK -> profiles.id name TEXT email TEXT NULL
+phone TEXT NULL company TEXT NULL document TEXT NULL address TEXT NULL
+notes TEXT NULL created_at TIMESTAMP updated_at TIMESTAMP
+
+Relacionamento: profiles 1:N clients
+
+2.3 services
+
+services
+
+id UUID PK user_id UUID FK -> profiles.id name TEXT description TEXT
+NULL unit TEXT price NUMERIC created_at TIMESTAMP updated_at TIMESTAMP
+
+Relacionamento: profiles 1:N services
+
+2.4 quotes
+
+quotes
+
+id UUID PK user_id UUID FK -> profiles.id client_id UUID FK ->
+clients.id
+
+quote_number TEXT public_id UUID UNIQUE
+
+title TEXT description TEXT NULL
+
+status TEXT
+
+subtotal NUMERIC discount_type TEXT discount_value NUMERIC
+discount_total NUMERIC tax_total NUMERIC total NUMERIC
+
+valid_until DATE NULL notes TEXT NULL terms TEXT NULL
+
+created_at TIMESTAMP updated_at TIMESTAMP sent_at TIMESTAMP NULL
+approved_at TIMESTAMP NULL declined_at TIMESTAMP NULL
+
+Status sugeridos: draft sent viewed approved declined expired cancelled
+
+2.5 quote_items
+
+quote_items
+
+id UUID PK quote_id UUID FK -> quotes.id service_id UUID FK ->
+services.id NULL
+
+name TEXT description TEXT NULL quantity NUMERIC unit_price NUMERIC
+discount NUMERIC subtotal NUMERIC created_at TIMESTAMP
+
+service_id é uma referência, mas name, description e unit_price devem
+ser copiados para preservar o snapshot histórico.
+
+2.6 quote_events
+
+quote_events
+
+id UUID PK quote_id UUID FK -> quotes.id type TEXT metadata JSONB NULL
+created_at TIMESTAMP
+
+Eventos: created sent viewed approved declined downloaded
+
+2.7 quote_signatures
+
+quote_signatures
+
+id UUID PK quote_id UUID FK -> quotes.id signer_name TEXT signer_email
+TEXT signature_data TEXT NULL signed_at TIMESTAMP ip_address INET NULL
+
+Para o projeto de portfólio, tratar isso como aceite eletrônico. Não
+apresentar como assinatura digital qualificada/legalmente certificada.
+
+RELACIONAMENTO GERAL
+
+auth.users │ ▼ profiles ├──────────────┐ ▼ ▼ clients services │ ▼ quotes
+├──────────────┬──────────────┐ ▼ ▼ ▼ quote_items quote_events
+quote_signatures
+
+SEGURANÇA DO BANCO
+
+-   Ativar RLS em todas as tabelas privadas.
+-   Usuário só pode acessar seus próprios clients, services e quotes.
+-   quote_items deve ser acessível somente quando o usuário possui o
+    quote.
+-   A rota pública deve expor somente os dados necessários.
+-   Não confiar apenas no frontend para autorização.
+-   Validar autorização no servidor/banco.
+-   Criar índices para user_id, client_id, quote_id e public_id.
+
+======================================================================
+3. ROADMAP POR FASES
+======================================================================
+
+FASE 1 — SETUP & DESIGN SYSTEM
+
+Objetivo: Deixar o projeto executável, conectado ao Supabase e com uma
+base visual consistente antes de criar regras de negócio.
+
+SPRINT 1 — INICIALIZAÇÃO
+
+Fazer: 1. Criar projeto Next.js com App Router e JavaScript. 2.
+Configurar Tailwind CSS. 3. Configurar shadcn/ui. 4. Configurar ESLint.
+5. Configurar aliases de importação. 6. Criar repositório Git. 7. Fazer
+primeiro commit. 8. Criar projeto Supabase. 9. Configurar variáveis de
+ambiente. 10. Criar README inicial.
+
+Checkpoint: - npm run dev funciona. - Aplicação abre. - Layout base
+renderiza. - Supabase está configurado.
+
+SPRINT 2 — DESIGN SYSTEM
+
+Criar primeiro: - Button - Input - Label - Textarea - Select - Card -
+Dialog - Dropdown Menu - Table - Badge - Avatar - Skeleton -
+Toast/feedback - Sheet para navegação mobile
+
+LAYOUT
+
+Desktop:
+
+Sidebar | Header | Conteúdo
+
+Sidebar: - Dashboard - Clientes - Serviços - Orçamentos - Configurações
+
+No mobile: - Sidebar vira Sheet.
+
+Não começar o Quote Builder antes de o layout e componentes base estarem
+estáveis.
+
+  -------------------------------------------
+  FASE 2 — AUTENTICAÇÃO & CLIENTES/SERVIÇOS
+  -------------------------------------------
+
+Objetivo: Construir a infraestrutura que alimentará o gerador.
+
+SPRINT 3 — AUTENTICAÇÃO
+
+Implementar: - signup - login - logout - recuperação de senha - proteção
+de rotas privadas - criação de profile - loading de sessão - sessão
+expirada - mensagens de erro
+
+Rotas protegidas: - /dashboard - /clients - /services - /quotes -
+/settings
+
+SPRINT 4 — CLIENTES
+
+Criar: - ClientTable - ClientForm - ClientDialog - DeleteClientDialog -
+ClientSearch - EmptyState
+
+Fluxo:
+
+/clients ↓ Novo cliente ↓ /clients/new ↓ Salvar ↓ /clients
+
+Usar React Hook Form + Zod.
+
+Validar frontend e servidor.
+
+SPRINT 5 — SERVIÇOS
+
+Criar: - ServiceTable - ServiceForm - ServiceDialog -
+DeleteServiceDialog - ServiceSearch
+
+Campos: - nome - descrição - unidade - preço
+
+  ----------------------------------------------
+  FASE 3 — CORAÇÃO DA APLICAÇÃO: QUOTE BUILDER
+  ----------------------------------------------
+
+Objetivo: Criar o fluxo principal de criação de propostas sem misturar
+UI, cálculos e persistência.
+
+SPRINT 6 — ESTRUTURA
+
+/quotes/new
+
+Novo orçamento ├── Cliente ├── Informações ├── Itens ├── Desconto ├──
+Impostos ├── Validade ├── Observações ├── Termos └── Resumo financeiro
+
+Componentes: - QuoteForm - ClientSelector - QuoteBasicInfo -
+QuoteItems - QuoteItemRow - AddItemButton - DiscountField - TaxField -
+QuoteSummary - QuoteNotes - QuoteActions
+
+SPRINT 7 — REACT HOOK FORM + ZOD
+
+Estrutura conceitual:
+
+quote = { clientId, title, description, items: [ { serviceId, name,
+description, quantity, unitPrice } ], discountType, discountValue,
+taxValue, validUntil, notes, terms }
+
+Usar useFieldArray para itens dinâmicos.
+
+Validações: - cliente obrigatório - título obrigatório - pelo menos um
+item - quantidade maior que zero - preço não negativo - desconto não
+negativo - imposto não negativo - data de validade válida
+
+SPRINT 8 — MOTOR DE CÁLCULOS
+
+Criar uma função pura:
+
+calculateQuoteTotals(items, discount, tax)
+
+Retorno:
+
+{ subtotal, discountTotal, taxTotal, total }
+
+Regras:
+
+itemSubtotal = quantity × unitPrice
+
+subtotal = soma dos itemSubtotal
+
+total = subtotal - discountTotal + taxTotal
+
+CUIDADOS COM DINHEIRO
+
+-   PostgreSQL: usar NUMERIC.
+-   Evitar cálculos monetários espalhados pela UI.
+-   Considerar valores em centavos no frontend ou uma estratégia
+    consistente de precisão.
+-   Criar testes específicos para os cálculos.
+
+SPRINT 9 — ZUSTAND
+
+Usar Zustand para estado global/temporário que realmente precise disso.
+
+Exemplos: - modo preview - preferências temporárias - estado de UI -
+dados temporários do construtor quando necessário
+
+React Hook Form: - estado do formulário.
+
+Supabase: - persistência.
+
+Não transformar Zustand em um segundo banco de dados.
+
+SPRINT 10 — PERSISTÊNCIA
+
+Implementar: - salvar quote como draft - criar quote_number - gerar
+public_id - criar quote_items como snapshot - permitir edição enquanto
+status = draft - tratar erros de rede - evitar perda silenciosa de dados
+
+  ------------------------------------------------
+  FASE 4 — VISUALIZAÇÃO, EXPORTAÇÃO & ASSINATURA
+  ------------------------------------------------
+
+Objetivo: Transformar o orçamento em documento profissional e
+compartilhável.
+
+SPRINT 11 — PREVIEW
+
+Criar:
+
+QuotePreview
+
+Entrada: dados completos do orçamento.
+
+Saída: documento visual final.
+
+Reutilizar o mesmo componente na: - visualização interna - página
+pública - geração de PDF quando possível
+
+Evitar três layouts independentes para o mesmo documento.
+
+SPRINT 12 — MÁQUINA DE ESTADOS
+
+Fluxo:
+
+DRAFT ↓ enviar SENT ↓ cliente visualiza VIEWED ├──→ APPROVED └──→
+DECLINED
+
+Também: SENT → EXPIRED DRAFT → CANCELLED
+
+Regras: - DRAFT: edição permitida. - SENT: edição bloqueada ou criação
+de nova versão. - VIEWED: registrar evento. - APPROVED: registrar
+aprovação. - DECLINED: registrar recusa. - EXPIRED: impedir aprovação. -
+Cliente não pode escolher qualquer status manualmente.
+
+SPRINT 13 — IMUTABILIDADE
+
+Regra crítica:
+
+Depois que o orçamento for enviado, não alterar silenciosamente: -
+preço - itens - cliente - total - condições
+
+Para o MVP: - bloquear edição após SENT.
+
+Para uma versão avançada:
+
+Quote #2026-001 Version 1 → R$ 1.500 ↓ Version 2 → R$ 1.700
+
+Cada versão deve preservar seu próprio snapshot.
+
+SPRINT 14 — PÁGINA PÚBLICA
+
+Criar:
+
+/quote/[publicId]
+
+Requisitos: - não exigir login do cliente - validar publicId no
+servidor - mostrar apenas dados necessários - registrar visualização -
+mostrar validade - mostrar status - permitir aprovação/recusa quando
+permitido
+
+SPRINT 15 — APROVAÇÃO/ACEITE
+
+Fluxo:
+
+Aprovar ↓ Nome Email Aceite dos termos ↓ Registrar aceite ↓ APPROVED ↓
+Confirmação
+
+Validar novamente no servidor: - status atual - validade - possibilidade
+de aprovação
+
+SPRINT 16 — PDF
+
+Só fazer depois de o preview HTML estar correto.
+
+Arquitetura:
+
+Dados do orçamento ↓ QuotePreview ↓ HTML ↓ PDF
+
+Testar: - quebra de página - itens longos - descrições grandes -
+valores - logo - rodapé - múltiplas páginas
+
+SPRINT 17 — COMPARTILHAMENTO
+
+Implementar: - copiar link - compartilhar por WhatsApp - feedback de
+link copiado - URL estável com public_id
+
+  ------------------------------------------
+  FASE 5 — DASHBOARD, MÉTRICAS & POLIMENTO
+  ------------------------------------------
+
+Objetivo: Transformar o MVP em um projeto forte para portfólio.
+
+SPRINT 18 — DASHBOARD
+
+Cards: - total de orçamentos - rascunhos - enviados - visualizados -
+aprovados - recusados - valor enviado - valor aprovado
+
+Conversão:
+
+taxa de conversão = orçamentos aprovados / orçamentos enviados × 100
+
+SPRINT 19 — LISTA DE ORÇAMENTOS
+
+Adicionar: - busca - filtro por status - filtro por período -
+ordenação - paginação quando necessário - badges - ações contextuais
+
+SPRINT 20 — RESPONSIVIDADE
+
+Prioridade especial: - página pública - construtor - dashboard -
+tabelas - sidebar
+
+No mobile: - sidebar vira Sheet - tabelas devem ter alternativa
+responsiva - formulários devem ser confortáveis - botões de ação devem
+ser fáceis de tocar
+
+SPRINT 21 — ESTADOS DE UX
+
+Implementar: - loading/skeleton - empty state - error state - success
+feedback - confirmation dialogs - botões disabled/loading - not-found -
+expired quote - unauthorized - falhas de rede
+
+SPRINT 22 — QUALIDADE E DIFERENCIAIS
+
+Implementar: - acessibilidade WCAG - labels corretos - foco por
+teclado - contraste adequado - navegação sem mouse - Server Components
+quando apropriado - imagens otimizadas - testes dos cálculos - testes de
+formulários - testes E2E do fluxo principal - tratamento global de
+erros - logs seguros - CI/CD - Lighthouse/Core Web Vitals - README
+profissional
+
+======================================================================
+4. ARQUITETURA E ESTRUTURA DE PASTAS
+======================================================================
+
+Estrutura sugerida:
+
+src/ ├── app/ │ ├── (public)/ │ │ ├── page.js │ │ └── quote/ │ │ └──
+[publicId]/ │ │ └── page.js │ │ │ ├── (auth)/ │ │ ├── login/ │ │ ├──
+signup/ │ │ ├── forgot-password/ │ │ └── reset-password/ │ │ │ ├──
+(dashboard)/ │ │ ├── dashboard/ │ │ ├── clients/ │ │ ├── services/ │ │
+├── quotes/ │ │ └── settings/ │ │ │ ├── api/ │ ├── layout.js │ └──
+globals.css │ ├── components/ │ ├── ui/ │ ├── layout/ │ ├── clients/ │
+├── services/ │ ├── quotes/ │ ├── dashboard/ │ └── shared/ │ ├── hooks/
+│ ├── useClients.js │ ├── useServices.js │ ├── useQuotes.js │ └──
+useQuoteBuilder.js │ ├── lib/ │ ├── supabase/ │ │ ├── client.js │ │ ├──
+server.js │ │ └── middleware.js │ ├── validations/ │ │ ├── client.js │ │
+├── service.js │ │ └── quote.js │ ├── calculations/ │ │ └── quote.js │
+├── utils/ │ └── constants/ │ ├── store/ │ └── quote-builder-store.js │
+└── actions/ ├── clients.js ├── services.js └── quotes.js
+
+NOTA: Como o projeto usa JavaScript, não é necessária uma pasta de
+tipos. Os schemas Zod podem validar a estrutura dos dados.
+
+RESPONSABILIDADE DAS CAMADAS
+
+app/ - Rotas, layouts e composição.
+
+components/ - UI e componentes reutilizáveis.
+
+hooks/ - Lógica reutilizável relacionada ao React/dados.
+
+lib/ - Supabase, validações, cálculos e utilitários.
+
+store/ - Estado global/temporário com Zustand.
+
+actions/ - Operações no servidor e escritas protegidas.
+
+Supabase - Auth, banco e segurança.
+
+SERVER COMPONENTS X CLIENT COMPONENTS
+
+Regra: - Server Component por padrão. - ‘use client’ somente quando
+necessário. - Formulários interativos serão Client Components. - Não
+transformar o layout inteiro em Client Component sem necessidade. -
+Aproveitar Server Components para páginas públicas e dados que não
+exigem interação.
+
+======================================================================
+5. REGRAS DE NEGÓCIO CRÍTICAS
+======================================================================
+
+1.  SNAPSHOT O orçamento deve guardar os dados dos itens no momento da
+    criação.
+
+2.  DINHEIRO Usar NUMERIC no PostgreSQL e estratégia consistente de
+    precisão no frontend.
+
+3.  DESCONTO Definir claramente:
+
+-   percentual ou
+-   valor fixo
+
+Validar limites.
+
+4.  IMPOSTOS No MVP, usar regra simples/configurável. Não assumir
+    automaticamente regras fiscais brasileiras complexas.
+
+5.  VALIDADE Após a data de validade, impedir aprovação.
+
+6.  IMUTABILIDADE Depois do envio, não alterar silenciosamente o
+    documento recebido.
+
+7.  AUTORIZAÇÃO Toda operação privada precisa ser autorizada no
+    servidor/banco.
+
+8.  PUBLIC ID Usar UUID/identificador aleatório. Não usar ID sequencial
+    como segredo.
+
+9.  EVENTOS Registrar:
+
+-   envio
+-   visualização
+-   aprovação
+-   recusa
+-   download quando aplicável
+
+10. CONCORRÊNCIA A aprovação precisa ser validada no servidor para
+    impedir ações conflitantes.
+
+11. EXCLUSÃO Considerar soft delete ou impedir exclusão de dados ligados
+    a documentos históricos.
+
+======================================================================
+6. ORDEM CRONOLÓGICA IDEAL
+======================================================================
+
+1.  Criar projeto Next.js + JavaScript
+2.  Configurar Tailwind + shadcn/ui
+3.  Configurar Supabase
+4.  Criar layout e Design System
+5.  Implementar Auth
+6.  Implementar profiles
+7.  Implementar clientes
+8.  Implementar serviços
+9.  Criar schemas Zod do orçamento
+10. Criar Quote Builder
+11. Criar motor de cálculos
+12. Criar persistência de drafts
+13. Criar QuotePreview
+14. Criar máquina de estados
+15. Criar página pública
+16. Criar aprovação/aceite
+17. Criar PDF
+18. Criar compartilhamento
+19. Criar dashboard
+20. Criar métricas
+21. Responsividade
+22. Testes
+23. Acessibilidade
+24. Performance
+25. Deploy
+26. README final
+
+======================================================================
+7. CHECKPOINTS
+======================================================================
+
+FASE 1 - Aplicação abre. - Layout estável. - Design System pronto. -
+Supabase configurado.
+
+FASE 2 - Usuário consegue criar conta. - Usuário consegue cadastrar
+clientes. - Usuário consegue cadastrar serviços.
+
+FASE 3 - Usuário consegue criar orçamento. - Itens são
+adicionados/removidos. - Cálculos funcionam. - Draft é salvo.
+
+FASE 4 - Preview funciona. - Orçamento pode ser enviado. - URL pública
+funciona. - Cliente pode aprovar/recusar. - PDF funciona.
+
+FASE 5 - Dashboard funciona. - Métricas funcionam. - Responsividade está
+pronta. - Testes principais existem. - Acessibilidade foi revisada. -
+Deploy está funcionando.
+
+======================================================================
+8. MVP MÍNIMO
+======================================================================
+
+Antes de polir o projeto, o seguinte fluxo deve funcionar de ponta a
+ponta:
+
+1.  Cadastro/login.
+2.  Clientes.
+3.  Serviços.
+4.  Criação de orçamento.
+5.  Adição/remoção de itens.
+6.  Subtotal.
+7.  Desconto.
+8.  Imposto.
+9.  Total.
+10. Salvar como rascunho.
+11. Enviar orçamento.
+12. Gerar URL pública.
+13. Visualizar sem login.
+14. Aprovar/recusar.
+15. Atualizar status.
+16. Registrar histórico básico.
+
+Somente depois disso investir pesado em: - animações - gráficos -
+temas - templates - efeitos visuais - funcionalidades extras
+
+======================================================================
+9. RESULTADO FINAL ESPERADO
+======================================================================
+
+O InvoiceFlow final deve demonstrar:
+
+-   React
+-   JavaScript moderno
+-   Next.js App Router
+-   arquitetura de componentes
+-   formulários complexos
+-   React Hook Form
+-   validação com Zod
+-   Zustand
+-   autenticação
+-   PostgreSQL
+-   Supabase
+-   RLS
+-   regras de negócio
+-   geração de PDF
+-   compartilhamento
+-   UX responsiva
+-   acessibilidade
+-   testes
+-   performance
+-   deploy
+
+O objetivo não é ter a maior quantidade possível de funcionalidades. O
+objetivo é construir um produto pequeno, coerente e tecnicamente sólido,
+com decisões arquiteturais que possam ser explicadas em uma entrevista.

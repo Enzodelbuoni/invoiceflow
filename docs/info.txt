@@ -1,0 +1,45 @@
+Conceito:
+Uma ferramenta para freelancers criarem propostas comerciais e orçamentos profissionais, calcularem valores e exportarem documentos.
+
+
+Core Features:
+- Cadastro de clientes.
+- Cadastro de serviços.
+- Criação de orçamento.
+- Cálculo automático de:
+  - subtotal;
+  - desconto;
+  - impostos;
+  - valor final.
+- Status:
+  - Rascunho;
+  - Enviado;
+  - Aprovado;
+  - Recusado.
+- Preview do orçamento.
+- Exportação para PDF.
+- Histórico de propostas.
+Stack:
+- React
+- Next.js
+- Tailwind
+- shadcn/ui
+- React Hook Form
+- Zod
+- Zustand
+- Supabase
+APIs/Serviços:
+- Supabase Auth
+- Supabase PostgreSQL
+- Serviço de geração de PDF
+Diferencial:
+Crie uma interface extremamente profissional e inclua:
+- templates de orçamento;
+- URL pública para o cliente visualizar a proposta;
+- botão “Aprovar proposta”;
+- assinatura digital simples;
+- métricas de conversão;
+- geração de PDF;
+- compartilhamento por WhatsApp;
+- validação completa dos formulários.
+O que demonstra: formulário complexo, validação, geração de documentos, banco de dados e preocupação com produto real.
