@@ -1,0 +1,20 @@
+{
+  // Tailwind v4: trata .css como Tailwind (evita avisos "Unknown at rule @theme/@apply/@custom-variant")
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  // Autocomplete de classes dentro de cn(...) e cva(...)
+  "tailwindCSS.classFunctions": ["cn", "cva"],
+  "editor.quickSuggestions": {
+    "strings": "on"
+  },
+  // O repositório usa LF (.gitattributes)
+  "files.eol": "\n",
+  // Não indexar/observar a pasta de build do Next
+  "search.exclude": {
+    "**/.next": true
+  },
+  "files.watcherExclude": {
+    "**/.next/**": true
+  }
+}

@@ -25,6 +25,7 @@ SaaS para freelancers criarem propostas/orçamentos profissionais: clientes, ser
 ## Estado atual
 
 - **Data da última atualização:** 2026-10-06
+- **Local do projeto:** `C:\dev\invoiceflow` (movido para fora do OneDrive na etapa 2 — o caminho antigo em `OneDrive\Área de Trabalho\meus-projetos\invoiceflow` não deve mais ser usado)
 - **Fase:** 1 — Setup & Design System
 - **Concluído:** Sprint 1 (inicialização), exceto criação do projeto Supabase, que depende do usuário.
 - **Build:** `npm run lint` ✅ · `npm run build` ✅ · `npm run dev` ✅ (página abre em http://localhost:3000)
@@ -40,8 +41,9 @@ SaaS para freelancers criarem propostas/orçamentos profissionais: clientes, ser
 ## Pendências com o usuário
 
 - [ ] **Criar projeto no Supabase** (supabase.com) e informar `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` → colocar em `.env.local` (copiar de `.env.example`). Necessário antes do Sprint 3 (Auth).
-- [ ] **Projeto está dentro do OneDrive** (`Área de Trabalho` sincronizada). O OneDrive tenta sincronizar `node_modules` e `.next` (milhares de arquivos) e pode causar lentidão e erros `EPERM`/`EBUSY`. Recomendação feita ao usuário: mover para fora do OneDrive (ex.: `C:\dev\invoiceflow`) ou pausar a sincronização. Aguardando decisão.
+- [x] ~~Projeto dentro do OneDrive~~ → resolvido na etapa 2 (movido para `C:\dev\invoiceflow`).
 - [ ] Criar repositório remoto no GitHub (opcional, quando o usuário quiser).
+- [ ] (Opcional, requer admin) Adicionar `C:\dev` às exclusões do Windows Defender para acelerar `npm install`/build. Não foi feito — só sugerido.
 
 ## Decisões técnicas (importante lembrar)
 
@@ -59,19 +61,22 @@ SaaS para freelancers criarem propostas/orçamentos profissionais: clientes, ser
   - O helper do proxy de sessão será `src/lib/supabase/proxy.js` (o plano original chamava de `middleware.js`).
 - **Zod v4** + `@hookform/resolvers` v5 (compatível com Zod 4).
 - **Rotas com route groups:** `(public)`, `(auth)`, `(dashboard)` conforme o plano. A home está em `src/app/(public)/page.js`.
-- **Finais de linha:** `.gitattributes` força LF.
+- **Finais de linha:** `.gitattributes` força LF; `.vscode/settings.json` usa `files.eol: "\n"`.
+- **VS Code do projeto** (`.vscode/settings.json`): `*.css` associado a `tailwindcss` (evita falsos avisos de `@theme`/`@apply`), autocomplete de classes em `cn()`/`cva()`, `.next` fora da busca/watcher. Extensões recomendadas: Tailwind CSS IntelliSense, ESLint, Prettier (o usuário já tem as três).
+- `package.json` declara `engines.node >= 20.9.0` (mínimo do Next 16).
 - Os documentos originais do usuário foram movidos para `docs/`.
 
 ## Problemas conhecidos / avisos
 
 - `npm audit` acusa 5 vulnerabilidades "high" no pacote `braces` (via `fast-glob`/`micromatch`), usado apenas por ferramentas de dev (eslint-plugin-next e CLI do shadcn). Não vai para o bundle do navegador. Não rodar `npm audit fix --force` (quebraria versões).
-- No Windows, ao parar o `npm run dev` em background, o processo `node` filho pode continuar escutando a porta 3000. Verificar com `netstat -ano | grep :3000` e encerrar o PID.
+- No Windows, ao parar o `npm run dev` em background, o processo `node` filho pode continuar escutando a porta 3000. Verificar com `Get-NetTCPConnection -LocalPort 3000 -State Listen`, conferir pela linha de comando (`Get-CimInstance Win32_Process`) que é o `next ... start-server.js` do invoiceflow e só então encerrar o PID.
 
 ## Histórico de etapas
 
 | # | Data       | Etapa                                   | Detalhes |
 |---|------------|-----------------------------------------|----------|
 | 1 | 2026-10-06 | Sprint 1 — Inicialização do projeto     | [etapa-01-setup.md](etapas/etapa-01-setup.md) |
+| 2 | 2026-10-06 | Mudança para fora do OneDrive + ajustes de ambiente | [etapa-02-mudanca-de-pasta.md](etapas/etapa-02-mudanca-de-pasta.md) |
 
 ## Roadmap (do plano de desenvolvimento)
 
