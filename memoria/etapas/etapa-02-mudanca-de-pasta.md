@@ -21,13 +21,17 @@ O projeto estava em `C:\Users\User\OneDrive\Área de Trabalho\meus-projetos\invo
    - `.next` fora da busca e do watcher.
 7. **`.vscode/extensions.json`** (novo): recomenda Tailwind CSS IntelliSense, ESLint e Prettier (o usuário já tem as três instaladas).
 8. **`package.json`:** `engines.node >= 20.9.0`.
-9. **Pasta antiga no OneDrive:** conteúdo removido depois da verificação. Ver o resultado no fim deste arquivo.
+9. **Pasta antiga no OneDrive:** conteúdo removido depois da verificação (ver "Resultado da remoção da pasta antiga" abaixo).
 
 ## O que o usuário precisa fazer
 
 - Fechar o VS Code e abrir a pasta **`C:\dev\invoiceflow`** (Arquivo → Abrir Pasta).
 - Abrir o Claude Code de novo nessa pasta. O `CLAUDE.md` carrega a memória automaticamente.
 - Apagar a pasta vazia antiga no OneDrive, se ela ainda existir (ela fica bloqueada enquanto o VS Code estiver aberto nela).
+
+## Resultado da remoção da pasta antiga
+
+Todo o conteúdo de `OneDrive\Área de Trabalho\meus-projetos\invoiceflow` foi apagado, inclusive `node_modules` e `.next`. Só a pasta raiz vazia continua lá, porque estava em uso pelo VS Code e pela sessão do Claude. O usuário pode apagá-la depois de reabrir o VS Code em `C:\dev\invoiceflow`. A pasta `meus-projetos` não foi tocada.
 
 ## Sugestão não aplicada (requer admin)
 
