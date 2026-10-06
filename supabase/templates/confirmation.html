@@ -1,0 +1,42 @@
+<!doctype html>
+<!-- Template "Confirm signup" do Supabase Auth (pt-BR). Publicado via `supabase config push`. -->
+<html lang="pt-BR">
+  <body style="margin:0;padding:0;background-color:#f5f7fa;font-family:Inter,Segoe UI,Helvetica,Arial,sans-serif;color:#0e111b;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f7fa;padding:40px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background-color:#ffffff;border:1px solid #e2e4e9;border-radius:16px;">
+            <tr>
+              <td style="padding:32px 32px 0 32px;">
+                <p style="margin:0;font-size:16px;font-weight:600;letter-spacing:-0.01em;">Invoice<em style="font-family:Georgia,serif;font-weight:400;">Flow</em></p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px 32px 8px 32px;">
+                <h1 style="margin:0 0 12px 0;font-family:Georgia,serif;font-size:26px;font-weight:400;line-height:1.2;">Confirme seu e-mail</h1>
+                <p style="margin:0;font-size:15px;line-height:1.6;color:#5e636f;">
+                  Falta pouco! Confirme seu e-mail para começar a criar propostas profissionais no InvoiceFlow.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px 32px;">
+                <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/dashboard"
+                   style="display:inline-block;background-color:#324fe7;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:12px 22px;border-radius:10px;">
+                  Confirmar meu e-mail
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 32px 32px 32px;">
+                <p style="margin:0;font-size:13px;line-height:1.6;color:#5e636f;">
+                  Se você não criou uma conta no InvoiceFlow, ignore este e-mail.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

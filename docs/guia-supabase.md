@@ -1,6 +1,11 @@
 # Guia: criar e conectar o projeto Supabase
 
-Passo a passo para criar o projeto Supabase do InvoiceFlow, pensado para quem nunca usou. Faça os passos 1 a 6 no navegador e depois me avise: eu conecto o código na **etapa 6**.
+Passo a passo para criar o projeto Supabase do InvoiceFlow, pensado para quem nunca usou.
+
+> ✅ **Situação em 06/10/2026:** o projeto `invoiceflow` (São Paulo) já existe e foi configurado pelo Claude via CLI do Supabase (`npx supabase login` feito pelo usuário). Este guia fica como referência, ou para recriar o projeto do zero. O que já foi feito automaticamente:
+> - `.env.local` gerado com a URL e a publishable key;
+> - migrações aplicadas (`supabase db push`);
+> - configurações de Auth aplicadas (`supabase config push`, a partir de `supabase/config.toml`).
 
 > Nomes de menus conferidos na documentação oficial em 06/10/2026. O painel do Supabase é em inglês e às vezes muda de lugar: se algum nome estiver diferente, procure o equivalente.
 
@@ -84,40 +89,13 @@ Isso diz ao Supabase para onde os links dos e-mails podem levar. No deploy adici
 - **Confirm email:** **desligue por enquanto** e clique em **Save**. Motivo: o serviço de e-mail grátis do Supabase **só entrega para os e-mails da sua equipe** (o seu) e no máximo **2 por hora**. Com a confirmação ligada, qualquer conta de teste com outro e-mail ficaria travada sem conseguir confirmar. Antes do deploy configuramos um serviço de e-mail próprio (ex.: Resend, que tem plano grátis) e religamos.
 - Se houver **Minimum password length**, coloque **8**, igual à validação do formulário.
 
-### 5.3 E-mails em português
+### 5.3 E-mails em português (só com SMTP próprio)
 
-**Authentication → Emails** (ou **Email Templates**) → aba **Templates**
+⚠️ **No plano Free, com o e-mail padrão do Supabase, não é possível personalizar os templates.** A API responde: *"Email template modification is not available for free tier projects using the default email provider"*. Por isso, por enquanto, os e-mails saem com o **texto padrão, em inglês**.
 
-Os modelos vêm em inglês e com um tipo de link que não combina com o nosso app (Next.js com sessão no servidor). Troque estes dois:
+O app já funciona com os templates padrão: o link do e-mail passa pelo Supabase e volta para `/auth/confirm?code=...`, que abre a sessão. ⚠️ Esse link precisa ser aberto **no mesmo navegador** em que a recuperação foi pedida.
 
-**Reset Password** (redefinir senha)
-
-- **Subject:**
-  ```
-  Redefina sua senha do InvoiceFlow
-  ```
-- **Body** (apague o conteúdo e cole):
-  ```html
-  <h2>Redefinir sua senha</h2>
-  <p>Recebemos um pedido para redefinir a senha da sua conta no InvoiceFlow.</p>
-  <p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password">Criar uma nova senha</a></p>
-  <p>O link vale por 1 hora. Se você não pediu isso, ignore este e-mail: sua senha continua a mesma.</p>
-  ```
-
-**Confirm signup** (confirmar cadastro; fica pronto para quando religarmos a confirmação)
-
-- **Subject:**
-  ```
-  Confirme seu e-mail no InvoiceFlow
-  ```
-- **Body:**
-  ```html
-  <h2>Confirme seu e-mail</h2>
-  <p>Falta pouco! Confirme seu e-mail para começar a usar o InvoiceFlow.</p>
-  <p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/dashboard">Confirmar meu e-mail</a></p>
-  ```
-
-Clique em **Save** em cada um. O endereço `/auth/confirm` ainda não existe no app: eu crio na etapa 6.
+Os templates em português já estão prontos no repositório (`supabase/templates/recovery.html` e `confirmation.html`). Quando configurarmos um SMTP próprio (ex.: Resend), é só reativar os blocos `[auth.email.template.*]` no `supabase/config.toml` e rodar `supabase config push`.
 
 ## Passo 6: preencher o `.env.local`
 
@@ -147,6 +125,17 @@ Diga "pronto" na conversa, **sem colar os valores**. Eu confiro se as variáveis
 - seu nome real no menu do usuário.
 
 ---
+
+## Como testar a recuperação de senha
+
+O e-mail padrão do Supabase **só entrega para os e-mails da equipe da organização**, ou seja, o da sua conta Supabase. Para testar:
+
+1. Crie uma conta no app (`/signup`) **com o mesmo e-mail da sua conta Supabase**.
+2. Saia, vá em **Esqueceu a senha?** e peça o link para esse e-mail.
+3. Abra o e-mail (em inglês, "Reset Your Password") **no mesmo navegador** e clique no link.
+4. Você cai em `/reset-password`, já com a sessão de recuperação aberta. Defina a nova senha.
+
+Limite: **2 e-mails por hora** no plano Free.
 
 ## Resumo do que guardar e onde
 

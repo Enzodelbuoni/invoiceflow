@@ -3,11 +3,12 @@ import { cookies } from "next/headers"
 import { AppHeader } from "@/components/layout/app-header"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-
-// TODO(Sprint 3): substituir pelo usuário autenticado (Supabase + tabela profiles).
-const PLACEHOLDER_USER = { name: "Freelancer Demo", email: "voce@exemplo.com" }
+import { requireUser } from "@/lib/auth/server"
 
 export default async function DashboardLayout({ children }) {
+  // O proxy já barra quem não está logado; conferir aqui de novo é a segunda barreira.
+  const user = await requireUser()
+
   // A sidebar salva aberta/recolhida no cookie "sidebar_state"; lendo aqui,
   // o servidor já renderiza no estado certo e não há "pulo" na hidratação.
   const cookieStore = await cookies()
@@ -21,7 +22,7 @@ export default async function DashboardLayout({ children }) {
       >
         Pular para o conteúdo
       </a>
-      <AppSidebar user={PLACEHOLDER_USER} />
+      <AppSidebar user={{ name: user.name, email: user.email }} />
       <SidebarInset className="overflow-hidden md:peer-data-[variant=inset]:h-[calc(100svh-1rem)] md:peer-data-[variant=inset]:shadow-md md:peer-data-[variant=inset]:ring-1 md:peer-data-[variant=inset]:ring-sidebar-border">
         {/* No desktop o painel rola por dentro (cabeçalho fixo no topo do painel);
             no mobile quem rola é a página. */}

@@ -15,9 +15,10 @@ import { Input } from "@/components/ui/input"
 import { getAuthErrorMessage, signIn } from "@/lib/auth/client"
 import { loginSchema } from "@/lib/validations/auth"
 
-export function LoginForm() {
+/** @param {{ next: string, initialError?: string | null }} props `next` já vem validado. */
+export function LoginForm({ next, initialError = null }) {
   const router = useRouter()
-  const [formError, setFormError] = useState(null)
+  const [formError, setFormError] = useState(initialError)
   const [navigating, startNavigation] = useTransition()
 
   const {
@@ -35,7 +36,7 @@ export function LoginForm() {
     try {
       await signIn(values)
       toast.success("Que bom te ver de novo!")
-      startNavigation(() => router.push("/dashboard"))
+      startNavigation(() => router.push(next))
     } catch (error) {
       setFormError(getAuthErrorMessage(error))
     }

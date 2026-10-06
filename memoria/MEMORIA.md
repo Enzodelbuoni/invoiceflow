@@ -26,29 +26,28 @@ SaaS para freelancers criarem propostas/orçamentos profissionais: clientes, ser
 
 - **Data da última atualização:** 2026-10-06
 - **Local do projeto:** `C:\dev\invoiceflow` (movido para fora do OneDrive na etapa 2 — o caminho antigo em `OneDrive\Área de Trabalho\meus-projetos\invoiceflow` não deve mais ser usado)
-- **Fase:** 2 — Autenticação & Clientes/Serviços (Sprint 3 em andamento)
-- **Concluído:** Sprint 1 (inicialização), exceto criação do projeto Supabase, que depende do usuário. Sprint 2 completo: identidade visual, componentes shadcn, layout da área privada (sidebar inset + header + Sheet no mobile), `StatusBadge`, `EmptyState`, `PageHeader`, tipografia e motion. Sprint 3 **parte 1**: telas de login, cadastro, recuperação e nova senha (RHF + Zod), com autenticação **simulada** (`AUTH_DEMO_MODE`).
+- **Fase:** 2 — Autenticação & Clientes/Serviços (Sprint 3 ✅, próximo: Sprint 4 Clientes)
+- **Concluído:** Sprint 1 (inicialização). Sprint 2 completo: identidade visual, componentes shadcn, layout da área privada (sidebar inset + header + Sheet no mobile), `StatusBadge`, `EmptyState`, `PageHeader`, tipografia e motion. Sprint 3 completo: telas de auth (RHF + Zod) + **Supabase Auth real** (proxy protegendo rotas, `/auth/confirm`, tabela `profiles` com RLS, testado de ponta a ponta).
 - **Build:** `npm run lint` ✅ · `npm run build` ✅ · `npm run dev` ✅. Rotas: `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/dashboard` (área privada) e `/design-system` (vitrine, só em dev).
-- **Backend:** **Supabase** (Auth + PostgreSQL + RLS). O usuário cogitou Firebase, comparamos e ele decidiu manter o Supabase (2026-10-06). **Ele nunca usou Supabase**: explicar os passos com calma. Guia de criação em `docs/guia-supabase.md`.
+- **Backend:** **Supabase** (Auth + PostgreSQL + RLS). Projeto `invoiceflow`, ref **`btglemtjexvwperrbfud`**, região `sa-east-1`, Postgres 17, plano Free. Pasta ligada (`supabase link`) e `.env.local` preenchido. O usuário **nunca tinha usado Supabase**: explicar com calma. CLI autenticado na máquina dele (`npx supabase login`).
+- **CLI do Supabase:** usar **`node node_modules/supabase/dist/supabase.js <cmd>`** (o `npx supabase` trava de forma intermitente). Comandos úteis em `memoria/etapas/etapa-06-supabase-auth.md`.
 
 ## Próximo passo
 
-**Etapa 06 — Sprint 3 (parte 2): conectar o Supabase Auth.** Depende do usuário seguir `docs/guia-supabase.md` e preencher o `.env.local`.
-1. Conferir o `.env.local` **sem imprimir valores** (só presença e formato: URL `https://*.supabase.co`, chave começando com `sb_publishable_`).
-2. **Ler antes** a documentação atual do `@supabase/ssr` para Next.js 16: o arquivo é `src/proxy.js` (função `proxy`) + helper `src/lib/supabase/proxy.js`, que renova a sessão com `supabase.auth.getClaims()`. Para autorização no servidor usar **`getClaims()`**, nunca `getSession()`.
-3. Trocar o miolo de `src/lib/auth/client.js` pelo Supabase (manter a interface `signIn/signUp/signOut/requestPasswordReset/confirmPasswordReset` + `AuthError`), mapear os erros do Supabase (`invalid_credentials`, `user_already_exists`, `weak_password`, `over_email_send_rate_limit`, `same_password`…) para mensagens pt-BR e pôr `AUTH_DEMO_MODE = false`. Avaliar se login e cadastro ficam no cliente ou viram Server Actions.
-4. Rota `src/app/auth/confirm/route.js` com `verifyOtp({ type, token_hash })`: sucesso → redireciona para `next` (**validar que é caminho relativo**, para não virar open redirect); falha → `/reset-password?erro=link-invalido` (ou `/login` com erro, se for confirmação de cadastro). Os templates de e-mail do guia já apontam para essa rota.
-5. `/reset-password`: mostrar "link inválido" também quando não houver sessão. Após trocar a senha o usuário já está logado, então decidir entre ir para `/dashboard` ou deslogar e mandar para `/login`.
-6. Cadastro: `signUp` com `options.data.full_name`. Se a confirmação de e-mail estiver ligada (`data.session === null`), mostrar o estado "Confirme seu e-mail" em vez de redirecionar. Hoje está **desligada** (ver pendências).
-7. Migração SQL: tabela `profiles` (id → `auth.users`, full_name, email, avatar_url, phone, timestamps), **RLS ligado** (o próprio usuário lê e edita só a sua linha), trigger `on auth.users insert` criando o profile. Guardar o SQL versionado (ex.: `supabase/migrations/`) e orientar o usuário a rodá-lo no **SQL Editor** do painel (passo a passo, porque ele é iniciante).
-8. Proteger `/dashboard`, `/clients`, `/services`, `/quotes` e `/settings` (sem sessão → `/login`); quem já está logado e abre `/login` ou `/signup` → `/dashboard`. Trocar o `PLACEHOLDER_USER` do `src/app/(dashboard)/layout.js` pelos dados reais.
+**Sprint 4 — Clientes** (Fase 2). Plano: ClientTable, ClientForm, ClientDialog, DeleteClientDialog, ClientSearch, EmptyState; fluxo `/clients` → `/clients/new` → salvar → `/clients`; RHF + Zod validando no front **e** no servidor.
+1. Migração `clients` (seção 2.2 do plano): `user_id` → `profiles.id` (ou `auth.users`), name, email, phone, company, document, address, notes, timestamps. Índice em `user_id`. **RLS + políticas do dono para select/insert/update/delete** (`to authenticated` + `(select auth.uid()) = user_id`, `with check` no insert/update). **`revoke all ... from anon, authenticated` + grants explícitos** (o projeto expõe tabelas novas por padrão). Rodar `db advisors` e testar o RLS simulando papéis, como na etapa 6.
+2. Pensar na exclusão: o plano sugere soft delete ou bloquear exclusão de clientes com orçamentos (regra 11). Decidir antes de criar a tabela, por exemplo com uma coluna `archived_at`.
+3. Schema Zod em `src/lib/validations/client.js` (CPF/CNPJ opcional com validação, telefone BR, e-mail opcional).
+4. Server Actions em `src/actions/clients.js` (verificar o usuário dentro de cada action, não só no proxy) + `revalidatePath`.
+5. UI no padrão visual (PageHeader, EmptyState, tabela com busca, dialog de exclusão com confirmação, toasts, skeleton de carregamento) e versão mobile das tabelas (cards).
 
-Pendente também: a **landing page `/`** continua provisória (já tem título serif e botões de entrar/cadastrar). Refazer antes do deploy.
+Pendente também: a **landing page `/`** continua provisória. Refazer antes do deploy.
 
 ## Pendências com o usuário
 
-- [ ] **Criar o projeto Supabase** seguindo `docs/guia-supabase.md` (passos 1–6: conta, organização, projeto em São Paulo, URL + publishable key, configuração de Auth e templates de e-mail em pt-BR) e preencher o `.env.local`. Necessário para a etapa 6. **Nunca pedir nem exibir os valores; a secret key não deve ser usada.**
-- [ ] **Antes do deploy:** configurar SMTP próprio (ex.: Resend) e religar "Confirm email". O e-mail padrão do Supabase só entrega para membros da equipe e no máximo 2 por hora.
+- [x] ~~Criar o projeto Supabase~~ → feito (projeto criado pelo usuário, configurado por mim via CLI na etapa 6). Guia de referência: `docs/guia-supabase.md` (passos 1–6: conta, organização, projeto em São Paulo, URL + publishable key, configuração de Auth e templates de e-mail em pt-BR) e preencher o `.env.local`. Necessário para a etapa 6. **Nunca pedir nem exibir os valores; a secret key não deve ser usada.**
+- [ ] **Testar a recuperação de senha com e-mail real** (só o usuário pode): cadastrar no app com o e-mail da conta Supabase, pedir o link e abri-lo **no mesmo navegador**. Passo a passo no fim de `docs/guia-supabase.md`.
+- [ ] **Antes do deploy:** configurar SMTP próprio (ex.: Resend), religar "Confirm email" e reativar os templates pt-BR (`[auth.email.template.*]` no `config.toml`, arquivos em `supabase/templates/`). No Free sem SMTP: só entrega para a equipe, máximo 2 por hora, e **templates personalizados são bloqueados**.
 - [ ] **Antes do deploy:** evitar a pausa do plano Free (7 dias com pouca atividade), por exemplo com um ping agendado (GitHub Actions). Projeto pausado se reativa em **Resume project** (até 1 ano).
 - [x] ~~Projeto dentro do OneDrive~~ → resolvido na etapa 2 (movido para `C:\dev\invoiceflow`).
 - [ ] Criar repositório remoto no GitHub (opcional, quando o usuário quiser).
@@ -67,6 +66,10 @@ Pendente também: a **landing page `/`** continua provisória (já tem título s
 - **Tailwind v4** — configuração via CSS (`@theme inline` no `globals.css`), sem `tailwind.config.js`.
 - **Backend = Supabase (confirmado em 2026-10-06, depois de cogitar o Firebase).** Motivos: dados relacionais (dashboard, filtros e busca em SQL), regras de negócio atômicas no banco (aprovação, numeração, NUMERIC), integração SSR oficial com o Next.js (`@supabase/ssr`) e aderência ao plano e ao portfólio (PostgreSQL + RLS).
 - **Autenticação no front (etapa 5):** formulários só usam `src/lib/auth/client.js` (`signIn`, `signUp`, `signOut`, `requestPasswordReset`, `confirmPasswordReset`, `AuthError`, `getAuthErrorMessage`). Schemas em `src/lib/validations/auth.js` (**Zod v4: usar `{ error: "..." }`**). Formulários com RHF + `zodResolver` + componentes `Field`/`FieldError` do shadcn, `mode: "onTouched"`.
+- **Auth no servidor (etapa 6):** `src/proxy.js` (Next 16) → `updateSession` em `src/lib/supabase/proxy.js` com `getClaims()`. Páginas e actions privadas devem chamar `requireUser()` / `getCurrentUser()` de `src/lib/auth/server.js` (segunda barreira). Rotas protegidas e anti open redirect em `src/lib/auth/redirect.js`. Links de e-mail → `/auth/confirm` (aceita `code` PKCE e `token_hash`).
+- **Banco (regras para toda migração):** criar com `supabase migration new` (nunca inventar o nome); RLS ligado; políticas `to authenticated` + `(select auth.uid())`; `using` + `with check` em update; **`revoke all from anon, authenticated` + grants mínimos explícitos**; funções de gatilho com `search_path=''` e `revoke execute`; depois `db advisors` + teste de RLS simulando papéis.
+- **`config push`:** sempre ver a diferença antes (`printf 'n
+' | ...`). O `config.toml` foi alinhado ao remoto em OTP (8), MFA/TOTP (ligado) e storage analytics (ligado).
 - **Supabase:** `@supabase/ssr` com `getAll`/`setAll`. Variáveis: `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (`sb_publishable_...`). As chaves legadas `anon`/`service_role` serão desativadas até o fim de 2026: usar só as novas. A **secret key** (`sb_secret_...`) ignora o RLS: nunca no front e, de preferência, em nenhum lugar (para a página pública, usar função SQL `security definer` que expõe só os campos necessários).
   - `src/lib/supabase/client.js` → browser · `src/lib/supabase/server.js` → servidor (`import "server-only"`) · `src/lib/supabase/env.js` → leitura/validação das env vars.
   - O helper do proxy de sessão será `src/lib/supabase/proxy.js` (o plano original chamava de `middleware.js`).
@@ -109,15 +112,16 @@ Pendente também: a **landing page `/`** continua provisória (já tem título s
 | 3 | 2026-10-06 | Sprint 2 (parte 1) — identidade visual, componentes shadcn, providers, vitrine | [etapa-03-design-tokens.md](etapas/etapa-03-design-tokens.md) |
 | 4 | 2026-10-06 | Sprint 2 (parte 2) — layout da área privada, StatusBadge, EmptyState, tipografia e motion | [etapa-04-layout-e-polimento-visual.md](etapas/etapa-04-layout-e-polimento-visual.md) |
 | 5 | 2026-10-06 | Sprint 3 (parte 1) — telas de autenticação (modo demonstração) + guia do Supabase | [etapa-05-telas-de-autenticacao.md](etapas/etapa-05-telas-de-autenticacao.md) |
+| 6 | 2026-10-06 | Sprint 3 (parte 2) — Supabase Auth real: proxy, /auth/confirm, profiles + RLS | [etapa-06-supabase-auth.md](etapas/etapa-06-supabase-auth.md) |
 
 ## Roadmap (do plano de desenvolvimento)
 
 **Fase 1 — Setup & Design System**
-- [x] Sprint 1 — Inicialização (falta só o projeto Supabase do usuário)
+- [x] Sprint 1 — Inicialização
 - [x] Sprint 2 — Design System + layout (sidebar/header/sheet mobile), StatusBadge, EmptyState, tipografia e motion
 
 **Fase 2 — Autenticação & Clientes/Serviços**
-- [ ] Sprint 3 — Autenticação (signup, login, logout, recuperação, proxy, profiles) — **parte 1 ✅** (telas + validação, auth simulada); falta a parte 2 (Supabase)
+- [x] Sprint 3 — Autenticação (signup, login, logout, recuperação, proxy, profiles)
 - [ ] Sprint 4 — Clientes (CRUD, RHF + Zod)
 - [ ] Sprint 5 — Serviços (CRUD)
 

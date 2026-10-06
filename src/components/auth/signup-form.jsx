@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
+import { MailCheckIcon } from "lucide-react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
@@ -18,6 +19,7 @@ import { signupSchema } from "@/lib/validations/auth"
 export function SignupForm() {
   const router = useRouter()
   const [formError, setFormError] = useState(null)
+  const [pendingConfirmation, setPendingConfirmation] = useState(null)
   const [navigating, startNavigation] = useTransition()
 
   const {
@@ -35,7 +37,11 @@ export function SignupForm() {
   async function onSubmit(values) {
     setFormError(null)
     try {
-      await signUp(values)
+      const { needsEmailConfirmation } = await signUp(values)
+      if (needsEmailConfirmation) {
+        setPendingConfirmation(values.email)
+        return
+      }
       toast.success("Conta criada!", { description: "Bem-vindo ao InvoiceFlow." })
       startNavigation(() => router.push("/dashboard"))
     } catch (error) {
@@ -44,6 +50,25 @@ export function SignupForm() {
   }
 
   const busy = isSubmitting || navigating
+
+  // Com a confirmação de e-mail ligada no Supabase, a conta só vale depois do clique
+  // no link. O painel é um elemento novo, então a entrada animada do template.js roda nele.
+  if (pendingConfirmation) {
+    return (
+      <div className="flex flex-col items-center gap-5 text-center">
+        <span className="flex size-14 items-center justify-center rounded-2xl border bg-card text-success shadow-md">
+          <MailCheckIcon aria-hidden="true" className="size-6" />
+        </span>
+        <div role="status" className="flex flex-col gap-2">
+          <h2 className="font-display text-2xl">Confirme seu e-mail</h2>
+          <p className="text-sm text-pretty text-muted-foreground">
+            Enviamos um link para <span className="font-medium text-foreground">{pendingConfirmation}</span>.
+            Clique nele para ativar sua conta. Confira também a caixa de spam.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <form noValidate onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">

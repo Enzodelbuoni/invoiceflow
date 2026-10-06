@@ -4,17 +4,18 @@ import { LinkIcon } from "lucide-react"
 import { AuthHeading } from "@/components/auth/auth-heading"
 import { ResetPasswordForm } from "@/components/auth/reset-password-form"
 import { Button } from "@/components/ui/button"
+import { getCurrentUser } from "@/lib/auth/server"
 
 export const metadata = { title: "Nova senha" }
 
-// Fluxo do Supabase: o link do e-mail passa por /auth/confirm (etapa 6), que abre
-// uma sessão de recuperação e redireciona para cá. Se o link for inválido ou
-// estiver vencido, a rota redireciona com ?erro=link-invalido.
-// TODO(etapa 6): mostrar o estado inválido também quando não houver sessão.
+// Fluxo do Supabase: o link do e-mail passa por /auth/confirm, que abre uma
+// sessão de recuperação e redireciona para cá. Link inválido ou vencido chega
+// com ?erro=link-invalido; sem sessão também não há como trocar a senha.
 export default async function ResetPasswordPage({ searchParams }) {
   const { erro } = await searchParams
+  const user = await getCurrentUser()
 
-  if (erro === "link-invalido") {
+  if (erro === "link-invalido" || !user) {
     return (
       <>
         <span className="flex size-12 items-center justify-center rounded-xl border bg-card text-muted-foreground shadow-sm">

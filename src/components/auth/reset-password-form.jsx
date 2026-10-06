@@ -35,8 +35,8 @@ export function ResetPasswordForm() {
     setFormError(null)
     try {
       await confirmPasswordReset({ password })
-      toast.success("Senha alterada!", { description: "Entre com a sua nova senha." })
-      startNavigation(() => router.push("/login"))
+      toast.success("Senha alterada!", { description: "Você já está conectado com a nova senha." })
+      startNavigation(() => router.push("/dashboard"))
     } catch (error) {
       setFormError(getAuthErrorMessage(error))
     }
