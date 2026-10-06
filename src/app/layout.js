@@ -1,4 +1,5 @@
 import { Geist, Geist_Mono } from "next/font/google";
+import { Providers } from "@/components/providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -22,11 +23,16 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
+    // suppressHydrationWarning: o next-themes adiciona a classe do tema no <html>
+    // antes da hidratação, então o atributo difere do HTML do servidor.
     <html
       lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

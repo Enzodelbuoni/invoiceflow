@@ -22,7 +22,7 @@ export default function Home() {
             Supabase:{" "}
             <span
               className={
-                supabaseReady ? "font-medium text-emerald-600" : "font-medium text-amber-600"
+                supabaseReady ? "font-medium text-success" : "font-medium text-warning"
               }
             >
               {supabaseReady ? "configurado" : "não configurado (.env.local)"}
