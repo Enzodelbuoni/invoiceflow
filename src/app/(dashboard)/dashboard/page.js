@@ -2,7 +2,6 @@ import Link from "next/link"
 import { CircleCheckIcon, FileTextIcon, PercentIcon, PlusIcon, SendIcon, WalletIcon } from "lucide-react"
 
 import { PageHeader } from "@/components/layout/page-header"
-import { ComingSoonButton } from "@/components/shared/coming-soon-button"
 import { EmptyState } from "@/components/shared/empty-state"
 import { Button } from "@/components/ui/button"
 import { formatLongDate, formatPercent } from "@/lib/format"
@@ -74,10 +73,12 @@ export default function DashboardPage() {
         title="Visão geral"
         description="Acompanhe suas propostas, aprovações e faturamento em um só lugar."
         actions={
-          <ComingSoonButton size="lg" message="O construtor de orçamentos chega na Fase 3.">
-            <PlusIcon data-icon="inline-start" />
-            Novo orçamento
-          </ComingSoonButton>
+          <Button asChild size="lg" className="h-10 px-4">
+            <Link href="/quotes/new">
+              <PlusIcon data-icon="inline-start" />
+              Novo orçamento
+            </Link>
+          </Button>
         }
       />
 
@@ -92,10 +93,12 @@ export default function DashboardPage() {
         title="Sua primeira proposta começa aqui"
         description="Cadastre um cliente, adicione seus serviços e monte um orçamento profissional em poucos minutos. O cliente aprova online, direto pelo link."
       >
-        <ComingSoonButton message="O construtor de orçamentos chega na Fase 3.">
-          <PlusIcon data-icon="inline-start" />
-          Criar orçamento
-        </ComingSoonButton>
+        <Button asChild>
+          <Link href="/quotes/new">
+            <PlusIcon data-icon="inline-start" />
+            Criar orçamento
+          </Link>
+        </Button>
         <Button variant="outline" asChild>
           <Link href="/clients">Ver clientes</Link>
         </Button>

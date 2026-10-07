@@ -1,14 +1,13 @@
+import Link from "next/link"
 import { ArrowRightIcon, FileTextIcon, PlusIcon } from "lucide-react"
 
 import { PageHeader } from "@/components/layout/page-header"
-import { ComingSoonButton } from "@/components/shared/coming-soon-button"
 import { EmptyState } from "@/components/shared/empty-state"
 import { StatusBadge } from "@/components/shared/status-badge"
+import { Button } from "@/components/ui/button"
 import { QUOTE_STATUS_DESCRIPTIONS } from "@/lib/constants/quote-status"
 
 export const metadata = { title: "Orçamentos" }
-
-const NEW_QUOTE_MESSAGE = "O construtor de orçamentos chega na Fase 3."
 
 function Arrow() {
   return <ArrowRightIcon aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground/60" />
@@ -62,10 +61,12 @@ export default function QuotesPage() {
         title="Orçamentos"
         description="Crie, envie e acompanhe suas propostas comerciais."
         actions={
-          <ComingSoonButton size="lg" message={NEW_QUOTE_MESSAGE}>
-            <PlusIcon data-icon="inline-start" />
-            Novo orçamento
-          </ComingSoonButton>
+          <Button asChild size="lg" className="h-10 px-4">
+            <Link href="/quotes/new">
+              <PlusIcon data-icon="inline-start" />
+              Novo orçamento
+            </Link>
+          </Button>
         }
       />
 
@@ -74,10 +75,12 @@ export default function QuotesPage() {
         title="Nenhum orçamento ainda"
         description="Monte propostas com itens, descontos e impostos calculados automaticamente, e envie um link para o cliente aprovar."
       >
-        <ComingSoonButton message={NEW_QUOTE_MESSAGE}>
-          <PlusIcon data-icon="inline-start" />
-          Criar primeiro orçamento
-        </ComingSoonButton>
+        <Button asChild>
+          <Link href="/quotes/new">
+            <PlusIcon data-icon="inline-start" />
+            Criar primeiro orçamento
+          </Link>
+        </Button>
       </EmptyState>
 
       <StatusLifecycle />

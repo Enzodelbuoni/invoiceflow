@@ -26,24 +26,28 @@ SaaS para freelancers criarem propostas/orçamentos profissionais: clientes, ser
 
 - **Data da última atualização:** 2026-10-07
 - **Local do projeto:** `C:\dev\invoiceflow` (movido para fora do OneDrive na etapa 2 — o caminho antigo em `OneDrive\Área de Trabalho\meus-projetos\invoiceflow` não deve mais ser usado)
-- **Fase:** 2 — Autenticação & Clientes/Serviços **✅ completa** (Sprints 3, 4 e 5). Próxima: **Fase 3 — Quote Builder** (Sprint 6).
+- **Fase:** 3 — Quote Builder. **Sprint 6 em andamento:** partes 1 (estrutura de `/quotes/new`) e 2 (seletor de cliente + cadastro rápido) ✅ e commitadas ([etapa-09](etapas/etapa-09-construtor-estrutura-e-cliente.md)); próxima: parte 3 (itens). Fase 2 ✅ completa (Sprints 3, 4 e 5).
 - **Concluído:** Sprint 1 (inicialização). Sprint 2 completo: identidade visual, componentes shadcn, layout da área privada (sidebar inset + header + Sheet no mobile), `StatusBadge`, `EmptyState`, `PageHeader`, tipografia e motion. Sprint 3 completo: telas de auth (RHF + Zod) + **Supabase Auth real** (proxy protegendo rotas, `/auth/confirm`, tabela `profiles` com RLS, testado de ponta a ponta). Sprint 4 completo: **CRUD de clientes** (tabela `clients` + RLS, camada de dados server-only, Server Actions, busca, máscaras e validação de CPF/CNPJ, tabela/cartões, detalhes, edição e exclusão). Sprint 5 completo: **CRUD de serviços** (tabela `services` com `price_cents`, dinheiro em centavos em `money.js`, campo de preço com máscara testada, prévia do item, peças de formulário compartilhadas) — ver [etapa-08](etapas/etapa-08-servicos.md).
-- **Build:** `npm run lint` ✅ · `npm run build` ✅ · `npm test` ✅ (Vitest, 221 testes) · `npm run dev` ✅. Rotas: `/login`, `/signup`, `/forgot-password`, `/reset-password`, área privada (`/dashboard`, `/clients/**`, `/services/**`, `/quotes` e `/settings` ainda vazias) e `/design-system` (vitrine, só em dev).
-- **Dados reais no banco:** desde 2026-10-07 existe **uma conta real do usuário** (1 usuário, 1 perfil, 1 cliente), e o Chrome dele fica logado nela em `localhost:3000`. **Nunca apagar dados em massa nem testar nessa sessão** (ver "Testes no Chrome" em Problemas conhecidos).
+- **Build:** `npm run lint` ✅ · `npm run build` ✅ · `npm test` ✅ (Vitest, 270 testes) · `npm run dev` ✅. Rotas: `/login`, `/signup`, `/forgot-password`, `/reset-password`, área privada (`/dashboard`, `/clients/**`, `/services/**`, `/quotes/new` em construção; `/quotes` e `/settings` ainda vazias) e `/design-system` (vitrine, só em dev).
+- **Conta do usuário no banco:** existe uma conta criada por ele no app (1 usuário, 1 perfil, 1 cliente), e o Chrome dele fica logado nela em `localhost:3000`. Em 2026-10-07 ele disse que é **conta de teste dele e pode ser usada ou apagada**. Mesmo assim, preferir testar com contas descartáveis em `e2e.localhost` (ver "Testes no Chrome" em Problemas conhecidos) e apagar só a conta de teste, pelo e-mail.
 - **Backend:** **Supabase** (Auth + PostgreSQL + RLS). Projeto `invoiceflow`, ref **`btglemtjexvwperrbfud`**, região `sa-east-1`, Postgres 17, plano Free. Pasta ligada (`supabase link`) e `.env.local` preenchido. O usuário **nunca tinha usado Supabase**: explicar com calma. CLI autenticado na máquina dele (`npx supabase login`).
 - **CLI do Supabase:** usar **`node node_modules/supabase/dist/supabase.js <cmd>`** (o `npx supabase` trava de forma intermitente). Comandos úteis em `memoria/etapas/etapa-06-supabase-auth.md`.
 
 ## Próximo passo
 
-**Sprint 6 — Estrutura do construtor de orçamentos** (Fase 3), em `/quotes/new`. Do plano: seções Cliente, Informações, Itens, Desconto, Impostos, Validade, Observações, Termos e Resumo financeiro; componentes QuoteForm, ClientSelector, QuoteBasicInfo, QuoteItems, QuoteItemRow, AddItemButton, DiscountField, TaxField, QuoteSummary, QuoteNotes e QuoteActions. Os Sprints 7 (RHF + Zod com `useFieldArray`), 8 (motor de cálculos puro + testes), 9 (Zustand) e 10 (persistência) vêm em seguida.
+**Sprint 6 — construtor de orçamentos (`/quotes/new`), parte 3: itens.** As partes 1 (estrutura) e 2 (seletor de cliente + `ClientDialog`) estão prontas e commitadas: ver [etapa-09](etapas/etapa-09-construtor-estrutura-e-cliente.md).
 
-Pontos já decididos ou herdados, para levar em conta:
-- **Dinheiro em centavos** em tudo (`money.js`); preço de item usa o `CurrencyField`/`CurrencyInput` de `src/components/shared/` (o `maxIntegerDigits` é configurável). Quantidade com unidade: `formatServiceUnit(unit, qtd)`.
-- **Cadastro rápido:** `ClientDialog` e `ServiceDialog` (adiados dos Sprints 4 e 5) entram aqui, no seletor de cliente e na adição de itens. Provavelmente exigem os componentes shadcn `popover`/`command` (instalar com `printf 'n\n' | npx shadcn add ...` e converter CRLF → LF).
-- **Snapshot:** o item do orçamento copia nome, descrição e preço do serviço; o preço pode ser ajustado no orçamento.
-- **Sprint 10 (migração de `quotes`/`quote_items`):** `quotes.client_id` → **ON DELETE RESTRICT** (a camada de dados de clientes já traduz o erro 23503); `quote_items.service_id` → **ON DELETE SET NULL**; valores em centavos `bigint`, como `services.price_cents`.
-- Desconto: percentual **ou** valor fixo, com limites. Impostos: regra simples/configurável (plano, regra 4).
-- Sugestão de primeira parte pequena: página `/quotes/new` com o esqueleto das seções (Server Component carrega clientes e serviços via `listClients`/`listServices`) e o layout em duas colunas (formulário + resumo fixo), trocando os `ComingSoonButton` de "Novo orçamento" (sidebar, dashboard e `/quotes`) pelo link real.
+Como retomar (ao abrir a sessão, ler a etapa 09 e `src/components/quotes/`):
+1. **Parte 3 — itens** (`quote-items.jsx`, hoje só o estado vazio): adicionar do catálogo (Popover + Command como no `client-selector.jsx`, com os serviços carregados no servidor numa consulta enxuta, tipo `listServiceOptions`) e item avulso; cada linha (`QuoteItemRow`) com nome, descrição, quantidade, unidade e preço (`CurrencyField`), remover e reordenar; `useFieldArray`; `ServiceDialog` para cadastro rápido de serviço (mesmo padrão do `ClientDialog`, com `stopPropagation` no submit).
+2. **Parte 4 — desconto e impostos** (`quote-adjustments.jsx`): desconto percentual **ou** valor fixo, imposto percentual; precisa de um campo de percentual (máscara + testes, como o de moeda).
+3. Depois: Sprint 7 (schema Zod do orçamento, cliente obrigatório, ≥ 1 item, quantidade > 0, validade ≥ hoje), Sprint 8 (`calculateQuoteTotals` puro, em centavos, com testes) ligando o resumo, Sprint 9 (Zustand), Sprint 10 (migração + salvar rascunho).
+
+Decisões já tomadas para essas partes:
+- **Dinheiro em centavos** em tudo (`money.js`); quantidade com unidade: `formatServiceUnit(unit, qtd)` ("1,5 hora").
+- **Snapshot:** o item copia nome, descrição, unidade e preço do serviço; o preço pode ser ajustado no orçamento.
+- **Sprint 10 (migração `quotes`/`quote_items`):** `quotes.client_id` → **ON DELETE RESTRICT** (a camada de clientes já traduz o erro 23503); `quote_items.service_id` → **ON DELETE SET NULL**; valores em centavos `bigint`; limites de `QUOTE_LIMITS`.
+- Impostos: regra simples/configurável (plano, regra 4); a base de cálculo (subtotal com ou sem desconto) se decide no Sprint 8.
+- Ideia para o Sprint 20: no celular, barra fixa no rodapé com o total e "Salvar".
 
 Pendente também: a **landing page `/`** continua provisória. Refazer antes do deploy.
 
@@ -93,6 +97,10 @@ Pendente também: a **landing page `/`** continua provisória. Refazer antes do 
   - **Máscara em input com RHF:** `event.target.value = mask(...)` antes de `registration.onChange(event)`. **Nunca** `setValue` dentro do onChange, porque o RHF pula a revalidação.
   - **Formulários (etapa 8):** usar as peças de `src/components/shared/form-fields.jsx` (`FormSection`, `TextField`, `TextareaField` com `maxLength` → contador, `SelectField`, `CurrencyField`), `SearchInput` nas listas e `ConfirmDeleteDialog` (invólucros `Delete<Recurso>Dialog` com textos, action e toast). Valores do banco → formulário com `to<Recurso>FormValues` no arquivo de validação.
   - **Campo de valor em reais:** `CurrencyField`/`CurrencyInput`. Regras em `src/lib/currency-input.js` (funções puras testadas); o componente só aplica o resultado no `<input>`.
+  - **Datas de calendário (etapa 9):** texto "AAAA-MM-DD" e `src/lib/dates.js`. "Hoje" vem do servidor (`todayIso()`) por prop. Nunca `new Date("AAAA-MM-DD")` formatado no fuso de SP (mostra o dia anterior).
+  - **Formulário dentro de diálogo/portal:** `onSubmit={(e) => { e.stopPropagation(); return handleSubmit(fn)(e) }}`, senão o submit sobe (pela árvore React) até o formulário de fora. Botões dentro de form sempre com `type="button"` (o `ComingSoonButton` já tem por padrão).
+  - **Listas para seletores:** consulta enxuta só com o que a interface mostra (`listClientOptions`), nunca a linha inteira. Busca local com `matchesSearch` (`src/lib/search.js`); no cmdk, `value` = id e o texto em `keywords`.
+  - **Seletor com lista (Popover + Command):** padrão em `client-selector.jsx`, incluindo o cuidado com o foco (voltar ao botão visível; não devolver o foco quando a lista fecha para abrir um diálogo).
   - Tabela no desktop (`hidden md:block`) + cartões no mobile (`md:hidden`); link "esticado" (`after:absolute after:inset-0`) com as ações em `relative z-10`.
   - Formatação pt-BR de % e datas em `src/lib/format.js`; **moeda em `src/lib/money.js`** (recebe centavos).
   - Componente com troca animada (`AnimatePresence`) **não** deve ser filho direto de um `template.js` (o `*:animate-enter` se soma à animação do motion): envolver num `<div>`.
@@ -114,6 +122,8 @@ Pendente também: a **landing page `/`** continua provisória. Refazer antes do 
 - Testes no Chrome: se `document.visibilityState === "hidden"` (janela em segundo plano), o clique não move o foco, o teclado não chega, os menus Radix não abrem e as animações só avançam com screenshot. Saídas: setter nativo + evento `input` para preencher campos, `PointerEvent('pointerdown')` para abrir menus Radix e `element.click()` nos itens.
 - Testes no Chrome (Claude in Chrome): o monitor do usuário é ultrawide (viewport ~3018 px CSS) e o screenshot vem reduzido, então **clicar por coordenada erra o alvo**. Usar refs do `find` ou `javascript_tool`. O `resize_window` não muda a viewport: para testar mobile, usar iframes de 390 px (e recarregar a aba depois, porque mexer no `<body>` quebra o React da página).
 - **Testes no Chrome com a conta real do usuário logada (desde 2026-10-07):** testar em **`http://e2e.localhost:3000`** (o dev server aceita subdomínios de localhost sem configurar `allowedDevOrigins`, e os cookies ficam separados da sessão dele em `localhost`). Conta de teste `e2e-<aleatório>@example.com`; na limpeza, apagar **só ela, pelo e-mail** (`delete from auth.users where email = '...'`, com cascade).
+- **Sessão de usuário apagado continua valendo até o token expirar (até ~1 h):** o `getClaims()` (proxy e `getCurrentUser`) valida o JWT localmente, sem consultar o Auth. Visto em 2026-10-07: a conta de teste apagada ainda aparecia logada em `e2e.localhost`. Sem risco aos dados (cascade apagou tudo, e inserções falham pela FK em `profiles`), mas **nos testes: sair da conta (menu → Sair) ANTES de apagá-la no banco**. Se um dia for preciso derrubar sessões na hora (usuário banido/excluído), usar `getUser()` nas rotas sensíveis.
+- **Testes no Chrome com aba oculta + Radix:** as animações de saída não rodam, então Popover/Dialog fechados **continuam no DOM** (e o `FocusScope` do diálogo segue prendendo o foco, o que invalida testes de foco). Para testar foco: injetar `*{animation:none!important;transition:none!important}` (o Radix desmonta na hora). O conteúdo do Popover também tem `role="dialog"`: para achar o diálogo, usar `[data-slot=dialog-content]`. Páginas com `loading.js` só hidratam depois de um quadro: uma tentativa de captura de tela (mesmo que expire) costuma destravar. Na 1ª navegação logo após subir o servidor, o Chrome pode cair numa página interna: navegar de novo.
 - Testes no Chrome com aba oculta: `setTimeout` é estrangulado (≥ 1 s por espera) e scripts longos estouram os 45 s da ferramenta. Esperar com `MessageChannel` e só digitar depois da hidratação (o input ter `__reactProps…`), senão o RHF regrava o valor padrão. Teclas simuladas: setter nativo + `InputEvent("input", { inputType, data })`; blur com `focusout`; menus Radix com `PointerEvent("pointerdown")` e, no item, `pointerup` + `click()`. Capturas de tela às vezes expiram, mas costumam funcionar logo depois de uma navegação.
 - Ferramenta Bash: um `python - <<'EOF'` com texto longo (aspas triplas, crases) travou sem rodar o Python (2026-10-07). Para editar textos longos, usar as ferramentas Edit/Write. Se usar Python, gravar com `write_bytes` (o `write_text` no Windows grava CRLF).
 - **Detectar CRLF:** `tr -cd '\r' < arquivo | wc -c`. No Git Bash, `grep $'\r'` casa todas as linhas (falso positivo).
@@ -131,6 +141,7 @@ Pendente também: a **landing page `/`** continua provisória. Refazer antes do 
 | 6 | 2026-10-06 | Sprint 3 (parte 2) — Supabase Auth real: proxy, /auth/confirm, profiles + RLS | [etapa-06-supabase-auth.md](etapas/etapa-06-supabase-auth.md) |
 | 7 | 2026-10-06 | Sprint 4 — Clientes: CRUD completo com RLS, busca, máscaras e CPF/CNPJ | [etapa-07-clientes.md](etapas/etapa-07-clientes.md) |
 | 8 | 2026-10-07 | Sprint 5 — Serviços: CRUD, dinheiro em centavos, campo de preço testado, Vitest, peças de formulário compartilhadas | [etapa-08-servicos.md](etapas/etapa-08-servicos.md) |
+| 9 | 2026-10-07 | Sprint 6 (partes 1 e 2) — estrutura do construtor de orçamentos, datas, seletor de cliente com busca e cadastro rápido | [etapa-09-construtor-estrutura-e-cliente.md](etapas/etapa-09-construtor-estrutura-e-cliente.md) |
 
 ## Roadmap (do plano de desenvolvimento)
 
@@ -144,7 +155,7 @@ Pendente também: a **landing page `/`** continua provisória. Refazer antes do 
 - [x] Sprint 5 — Serviços (CRUD, preço em centavos)
 
 **Fase 3 — Quote Builder**
-- [ ] Sprint 6 — Estrutura do construtor
+- [ ] Sprint 6 — Estrutura do construtor (em andamento: estrutura e seletor de cliente prontos; faltam itens e desconto/impostos)
 - [ ] Sprint 7 — React Hook Form + Zod (useFieldArray)
 - [ ] Sprint 8 — Motor de cálculos (função pura + testes)
 - [ ] Sprint 9 — Zustand (estado de UI)

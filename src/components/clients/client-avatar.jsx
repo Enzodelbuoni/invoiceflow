@@ -17,6 +17,7 @@ function initials(name) {
 }
 
 const SIZES = {
+  xs: "size-7 text-[0.6875rem] rounded-md",
   sm: "size-8 text-xs rounded-lg",
   default: "size-10 text-sm rounded-xl",
   lg: "size-14 text-lg rounded-2xl",

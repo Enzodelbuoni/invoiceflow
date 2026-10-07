@@ -1,7 +1,7 @@
 import "server-only"
 import { cache } from "react"
 
-import { DataError, getDataContext, isUuid, sanitizeSearch } from "@/lib/data/shared"
+import { DataError, databaseError, getDataContext, isUuid, sanitizeSearch } from "@/lib/data/shared"
 import { isSupabaseConfigured } from "@/lib/supabase/env"
 
 // Camada de acesso a dados dos clientes (peças comuns em ./shared.js).
@@ -20,7 +20,23 @@ export async function listClients({ query = "" } = {}) {
   }
 
   const { data, error } = await request
-  if (error) throw new DataError("query_failed", "Não foi possível carregar os clientes.")
+  if (error) throw databaseError("clients", "query_failed", "Não foi possível carregar os clientes.", error)
+  return data
+}
+
+/**
+ * Clientes para o seletor do orçamento: só o que a interface mostra (sem
+ * documento, endereço nem observações internas), em ordem alfabética.
+ */
+export async function listClientOptions() {
+  if (!isSupabaseConfigured()) return []
+  const { user, supabase } = await getDataContext()
+  const { data, error } = await supabase
+    .from("clients")
+    .select("id, name, company, email")
+    .eq("user_id", user.id)
+    .order("name")
+  if (error) throw databaseError("clients", "query_failed", "Não foi possível carregar os clientes.", error)
   return data
 }
 
@@ -37,7 +53,7 @@ export const getClient = cache(async (id) => {
     .eq("id", id)
     .eq("user_id", user.id)
     .maybeSingle()
-  if (error) throw new DataError("query_failed", "Não foi possível carregar o cliente.")
+  if (error) throw databaseError("clients", "query_failed", "Não foi possível carregar o cliente.", error)
   return data
 })
 
@@ -49,7 +65,7 @@ export async function insertClient(values) {
     .insert({ ...values, user_id: user.id })
     .select("id")
     .single()
-  if (error) throw new DataError("insert_failed", "Não foi possível salvar o cliente.")
+  if (error) throw databaseError("clients", "insert_failed", "Não foi possível salvar o cliente.", error)
   return data
 }
 
@@ -63,7 +79,7 @@ export async function updateClient(id, values) {
     .eq("user_id", user.id)
     .select("id")
     .maybeSingle()
-  if (error) throw new DataError("update_failed", "Não foi possível salvar as alterações.")
+  if (error) throw databaseError("clients", "update_failed", "Não foi possível salvar as alterações.", error)
   if (!data) throw new DataError("not_found", "Cliente não encontrado.")
   return data
 }
@@ -83,7 +99,7 @@ export async function deleteClient(id) {
     if (error.code === "23503") {
       throw new DataError("has_quotes", "Este cliente tem orçamentos e não pode ser excluído.")
     }
-    throw new DataError("delete_failed", "Não foi possível excluir o cliente.")
+    throw databaseError("clients", "delete_failed", "Não foi possível excluir o cliente.", error)
   }
   if (!data) throw new DataError("not_found", "Cliente não encontrado.")
 }

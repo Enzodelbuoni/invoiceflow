@@ -4,7 +4,6 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion } from "motion/react"
 import { PlusIcon } from "lucide-react"
-import { toast } from "sonner"
 
 import { LogoMark, LogoWordmark } from "@/components/brand/logo"
 import { NavUser } from "@/components/layout/nav-user"
@@ -93,14 +92,14 @@ export function AppSidebar({ user, ...props }) {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
+                asChild
                 tooltip="Novo orçamento"
                 className="justify-center bg-primary font-medium text-primary-foreground shadow-sm ring-1 ring-primary/20 transition-[background-color,box-shadow,translate] duration-200 hover:-translate-y-px hover:bg-primary/90 hover:text-primary-foreground hover:shadow-md active:translate-y-0 active:bg-primary active:text-primary-foreground"
-                onClick={() =>
-                  toast.info("Em breve", { description: "O construtor de orçamentos chega na Fase 3." })
-                }
               >
-                <PlusIcon />
-                <span>Novo orçamento</span>
+                <Link href="/quotes/new">
+                  <PlusIcon />
+                  <span>Novo orçamento</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
