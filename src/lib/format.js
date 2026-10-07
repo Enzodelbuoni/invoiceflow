@@ -32,3 +32,15 @@ export function formatLongDate(date) {
   const text = longDateFormatter.format(date)
   return text.charAt(0).toUpperCase() + text.slice(1)
 }
+
+const shortDateFormatter = new Intl.DateTimeFormat("pt-BR", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  timeZone: "America/Sao_Paulo",
+})
+
+/** Date | string ISO → "6 de out. de 2026" (fuso de São Paulo) */
+export function formatShortDate(date) {
+  return shortDateFormatter.format(new Date(date))
+}

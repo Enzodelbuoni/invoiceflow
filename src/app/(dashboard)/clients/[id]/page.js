@@ -1,0 +1,144 @@
+import Link from "next/link"
+import { notFound } from "next/navigation"
+import {
+  ArrowLeftIcon,
+  Building2Icon,
+  FileTextIcon,
+  IdCardIcon,
+  MailIcon,
+  MapPinIcon,
+  MessageCircleIcon,
+  PencilIcon,
+  PhoneIcon,
+  StickyNoteIcon,
+} from "lucide-react"
+
+import { ClientAvatar } from "@/components/clients/client-avatar"
+import { ClientDetailActions } from "@/components/clients/client-detail-actions"
+import { EmptyState } from "@/components/shared/empty-state"
+import { Button } from "@/components/ui/button"
+import { formatDocument, formatPhone } from "@/lib/br"
+import { getClient } from "@/lib/data/clients"
+import { formatShortDate } from "@/lib/format"
+
+export async function generateMetadata({ params }) {
+  const { id } = await params
+  const client = await getClient(id)
+  return { title: client?.name ?? "Cliente" }
+}
+
+/** Linha de informação: ícone + rótulo + valor (ou traço quando vazio). */
+function InfoItem({ icon: Icon, label, children }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span aria-hidden="true" className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+        <Icon className="size-4" />
+      </span>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <dt className="text-xs text-muted-foreground">{label}</dt>
+        <dd className="text-sm break-words">{children || <span className="text-muted-foreground">Não informado</span>}</dd>
+      </div>
+    </div>
+  )
+}
+
+export default async function ClientPage({ params }) {
+  const { id } = await params
+  const client = await getClient(id)
+  if (!client) notFound()
+
+  const whatsappUrl = client.phone ? `https://wa.me/55${client.phone}` : null
+
+  return (
+    <>
+      <div className="flex flex-col gap-6">
+        <Link href="/clients" className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeftIcon aria-hidden="true" className="size-4" />
+          Clientes
+        </Link>
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <ClientAvatar name={client.name} size="lg" />
+            <div className="flex min-w-0 flex-col gap-1">
+              <h1 className="font-display text-4xl leading-tight tracking-[-0.01em] text-balance">{client.name}</h1>
+              <p className="text-sm text-muted-foreground">
+                {client.company ? `${client.company} · ` : ""}Cliente desde {formatShortDate(client.created_at)}
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <Button asChild variant="outline" className="h-10">
+              <Link href={`/clients/${client.id}/edit`}>
+                <PencilIcon data-icon="inline-start" />
+                Editar
+              </Link>
+            </Button>
+            <ClientDetailActions client={{ id: client.id, name: client.name }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <section aria-labelledby="contato" className="rounded-xl border bg-card p-5 shadow-sm lg:col-span-2">
+          <h2 id="contato" className="mb-5 text-sm font-semibold">
+            Contato e dados
+          </h2>
+          <dl className="grid gap-5 sm:grid-cols-2">
+            <InfoItem icon={MailIcon} label="E-mail">
+              {client.email && (
+                <a href={`mailto:${client.email}`} className="text-primary-ink hover:underline">
+                  {client.email}
+                </a>
+              )}
+            </InfoItem>
+            <InfoItem icon={PhoneIcon} label="Telefone">
+              {client.phone && (
+                <span className="flex flex-wrap items-center gap-x-3 gap-y-1 tabular-nums">
+                  {formatPhone(client.phone)}
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-medium text-success hover:underline"
+                  >
+                    <MessageCircleIcon aria-hidden="true" className="size-3.5" />
+                    WhatsApp
+                  </a>
+                </span>
+              )}
+            </InfoItem>
+            <InfoItem icon={Building2Icon} label="Empresa">
+              {client.company}
+            </InfoItem>
+            <InfoItem icon={IdCardIcon} label={client.document?.length === 14 ? "CNPJ" : "CPF / CNPJ"}>
+              {client.document && <span className="tabular-nums">{formatDocument(client.document)}</span>}
+            </InfoItem>
+            <div className="sm:col-span-2">
+              <InfoItem icon={MapPinIcon} label="Endereço">
+                {client.address}
+              </InfoItem>
+            </div>
+          </dl>
+        </section>
+
+        <section aria-labelledby="observacoes" className="rounded-xl border bg-card p-5 shadow-sm">
+          <h2 id="observacoes" className="mb-4 flex items-center gap-2 text-sm font-semibold">
+            <StickyNoteIcon aria-hidden="true" className="size-4 text-muted-foreground" />
+            Observações
+          </h2>
+          {client.notes ? (
+            <p className="text-sm whitespace-pre-line text-pretty">{client.notes}</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">Nenhuma anotação. Use para lembrar preferências e combinados.</p>
+          )}
+        </section>
+      </div>
+
+      <EmptyState
+        icon={FileTextIcon}
+        title="Nenhum orçamento ainda"
+        description={`Os orçamentos enviados para ${client.name} aparecerão aqui, com status e valores.`}
+      />
+    </>
+  )
+}
