@@ -24,26 +24,26 @@ SaaS para freelancers criarem propostas/orçamentos profissionais: clientes, ser
 
 ## Estado atual
 
-- **Data da última atualização:** 2026-10-06
+- **Data da última atualização:** 2026-10-07
 - **Local do projeto:** `C:\dev\invoiceflow` (movido para fora do OneDrive na etapa 2 — o caminho antigo em `OneDrive\Área de Trabalho\meus-projetos\invoiceflow` não deve mais ser usado)
-- **Fase:** 2 — Autenticação & Clientes/Serviços (Sprints 3 e 4 ✅, próximo: Sprint 5 Serviços)
-- **Concluído:** Sprint 1 (inicialização). Sprint 2 completo: identidade visual, componentes shadcn, layout da área privada (sidebar inset + header + Sheet no mobile), `StatusBadge`, `EmptyState`, `PageHeader`, tipografia e motion. Sprint 3 completo: telas de auth (RHF + Zod) + **Supabase Auth real** (proxy protegendo rotas, `/auth/confirm`, tabela `profiles` com RLS, testado de ponta a ponta). Sprint 4 completo: **CRUD de clientes** (tabela `clients` + RLS, camada de dados server-only, Server Actions, busca, máscaras e validação de CPF/CNPJ, tabela/cartões, detalhes, edição e exclusão).
-- **Build:** `npm run lint` ✅ · `npm run build` ✅ · `npm run dev` ✅. Rotas: `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/dashboard` (área privada) e `/design-system` (vitrine, só em dev).
+- **Fase:** 2 — Autenticação & Clientes/Serviços **✅ completa** (Sprints 3, 4 e 5). Próxima: **Fase 3 — Quote Builder** (Sprint 6).
+- **Concluído:** Sprint 1 (inicialização). Sprint 2 completo: identidade visual, componentes shadcn, layout da área privada (sidebar inset + header + Sheet no mobile), `StatusBadge`, `EmptyState`, `PageHeader`, tipografia e motion. Sprint 3 completo: telas de auth (RHF + Zod) + **Supabase Auth real** (proxy protegendo rotas, `/auth/confirm`, tabela `profiles` com RLS, testado de ponta a ponta). Sprint 4 completo: **CRUD de clientes** (tabela `clients` + RLS, camada de dados server-only, Server Actions, busca, máscaras e validação de CPF/CNPJ, tabela/cartões, detalhes, edição e exclusão). Sprint 5 completo: **CRUD de serviços** (tabela `services` com `price_cents`, dinheiro em centavos em `money.js`, campo de preço com máscara testada, prévia do item, peças de formulário compartilhadas) — ver [etapa-08](etapas/etapa-08-servicos.md).
+- **Build:** `npm run lint` ✅ · `npm run build` ✅ · `npm test` ✅ (Vitest, 221 testes) · `npm run dev` ✅. Rotas: `/login`, `/signup`, `/forgot-password`, `/reset-password`, área privada (`/dashboard`, `/clients/**`, `/services/**`, `/quotes` e `/settings` ainda vazias) e `/design-system` (vitrine, só em dev).
+- **Dados reais no banco:** desde 2026-10-07 existe **uma conta real do usuário** (1 usuário, 1 perfil, 1 cliente), e o Chrome dele fica logado nela em `localhost:3000`. **Nunca apagar dados em massa nem testar nessa sessão** (ver "Testes no Chrome" em Problemas conhecidos).
 - **Backend:** **Supabase** (Auth + PostgreSQL + RLS). Projeto `invoiceflow`, ref **`btglemtjexvwperrbfud`**, região `sa-east-1`, Postgres 17, plano Free. Pasta ligada (`supabase link`) e `.env.local` preenchido. O usuário **nunca tinha usado Supabase**: explicar com calma. CLI autenticado na máquina dele (`npx supabase login`).
 - **CLI do Supabase:** usar **`node node_modules/supabase/dist/supabase.js <cmd>`** (o `npx supabase` trava de forma intermitente). Comandos úteis em `memoria/etapas/etapa-06-supabase-auth.md`.
 
 ## Próximo passo
 
-**Sprint 5 — Serviços** (Fase 2). Plano: ServiceTable, ServiceForm, ServiceDialog, DeleteServiceDialog, ServiceSearch; campos nome, descrição, unidade e preço. **Seguir exatamente o padrão do Sprint 4** (`memoria/etapas/etapa-07-clientes.md`):
-1. Migração `services` via `migration new`:
-   - `user_id` default `auth.uid()` → `profiles`;
-   - `name` (2–120), `description` (≤ 1000), `unit` (lista fechada, ex.: hora, dia, projeto, unidade, mês, página, palavra, com CHECK);
-   - **`price_cents bigint not null check (price_cents >= 0)`**: dinheiro em centavos inteiros, decisão alinhada ao Sprint 8; o plano fala em NUMERIC, mas centavos evitam erro de ponto flutuante no JS e mantêm exatidão;
-   - `set_updated_at`, RLS das 4 operações, `revoke all` + grants, `db advisors`, teste de RLS por papéis.
-2. Utilitário de dinheiro: `parseCurrencyInput("1.234,56") → 123456` e `formatCurrency` a partir de centavos, com testes. Campo de preço com máscara de moeda (aplicada no evento, ver o bug do RHF na etapa 7).
-3. Schema Zod `src/lib/validations/service.js`, camada de dados `src/lib/data/services.js`, actions `src/actions/services.js`.
-4. UI: `/services` (lista com busca, tabela/cartões, preço formatado + unidade), `/services/new`, `/services/[id]/edit`. Detalhes provavelmente desnecessários (serviço é simples), então editar direto pela lista.
-5. Exclusão: serviço pode ser excluído sempre, porque os itens do orçamento guardam **snapshot** (nome, descrição, preço) e `service_id` vira `ON DELETE SET NULL` no Sprint 10.
+**Sprint 6 — Estrutura do construtor de orçamentos** (Fase 3), em `/quotes/new`. Do plano: seções Cliente, Informações, Itens, Desconto, Impostos, Validade, Observações, Termos e Resumo financeiro; componentes QuoteForm, ClientSelector, QuoteBasicInfo, QuoteItems, QuoteItemRow, AddItemButton, DiscountField, TaxField, QuoteSummary, QuoteNotes e QuoteActions. Os Sprints 7 (RHF + Zod com `useFieldArray`), 8 (motor de cálculos puro + testes), 9 (Zustand) e 10 (persistência) vêm em seguida.
+
+Pontos já decididos ou herdados, para levar em conta:
+- **Dinheiro em centavos** em tudo (`money.js`); preço de item usa o `CurrencyField`/`CurrencyInput` de `src/components/shared/` (o `maxIntegerDigits` é configurável). Quantidade com unidade: `formatServiceUnit(unit, qtd)`.
+- **Cadastro rápido:** `ClientDialog` e `ServiceDialog` (adiados dos Sprints 4 e 5) entram aqui, no seletor de cliente e na adição de itens. Provavelmente exigem os componentes shadcn `popover`/`command` (instalar com `printf 'n\n' | npx shadcn add ...` e converter CRLF → LF).
+- **Snapshot:** o item do orçamento copia nome, descrição e preço do serviço; o preço pode ser ajustado no orçamento.
+- **Sprint 10 (migração de `quotes`/`quote_items`):** `quotes.client_id` → **ON DELETE RESTRICT** (a camada de dados de clientes já traduz o erro 23503); `quote_items.service_id` → **ON DELETE SET NULL**; valores em centavos `bigint`, como `services.price_cents`.
+- Desconto: percentual **ou** valor fixo, com limites. Impostos: regra simples/configurável (plano, regra 4).
+- Sugestão de primeira parte pequena: página `/quotes/new` com o esqueleto das seções (Server Component carrega clientes e serviços via `listClients`/`listServices`) e o layout em duas colunas (formulário + resumo fixo), trocando os `ComingSoonButton` de "Novo orçamento" (sidebar, dashboard e `/quotes`) pelo link real.
 
 Pendente também: a **landing page `/`** continua provisória. Refazer antes do deploy.
 
@@ -89,10 +89,12 @@ Pendente também: a **landing page `/`** continua provisória. Refazer antes do 
   - Sombras `shadow-xs..xl` vêm de `--elevation-*` (por tema). Motion: `animate-enter`, `animate-float`, `ease-out-expo`. Biblioteca `motion` v14 (`motion/react`) para `layoutId`/`AnimatePresence`.
   - Páginas privadas: usar `PageHeader` + seções como filhos diretos (o `template.js` faz o stagger de entrada). Listas vazias usam `EmptyState`. Status sempre via `StatusBadge` + `src/lib/constants/quote-status.js`.
   - Ação ainda não implementada → `ComingSoonButton` (toast), nunca um link para 404.
-  - **CRUD padrão (etapa 7):** migração com RLS + grants → `src/lib/br.js`/utilitários → schema Zod que normaliza para o banco → camada de dados `src/lib/data/<recurso>.js` (`server-only`, `DataError`, filtro por `user_id`, UUID validado, `cache` no get) → actions `src/actions/<recurso>.js` ("use server", revalida com o schema, devolve `{ ok, id }` ou `{ ok:false, message, fieldErrors }`) → páginas (lista em `(list)/` com `loading.js`, new, [id], [id]/edit, not-found) → componentes em `src/components/<recurso>/`.
+  - **CRUD padrão (etapa 7):** migração com RLS + grants → `src/lib/br.js`/utilitários → schema Zod que normaliza para o banco (textos via `src/lib/validations/text.js`, **limites contados como o Postgres**; teste que confere os limites lendo a migração) → camada de dados `src/lib/data/<recurso>.js` (`server-only`, peças de `data/shared.js`: `DataError`, `databaseError`, `getDataContext`, `isUuid`, `sanitizeSearch`; filtro por `user_id`, `cache` no get) → actions `src/actions/<recurso>.js` ("use server", `parseInput(schema, values)` + `toFailure(scope, error)` de `src/lib/action-result.js`, devolve `{ ok, id }` ou `{ ok:false, message, fieldErrors }`). Testes de módulos `server-only` usam `vi.mock("server-only", () => ({}))` → páginas (lista em `(list)/` com `loading.js`, new, [id], [id]/edit, not-found) → componentes em `src/components/<recurso>/`.
   - **Máscara em input com RHF:** `event.target.value = mask(...)` antes de `registration.onChange(event)`. **Nunca** `setValue` dentro do onChange, porque o RHF pula a revalidação.
+  - **Formulários (etapa 8):** usar as peças de `src/components/shared/form-fields.jsx` (`FormSection`, `TextField`, `TextareaField` com `maxLength` → contador, `SelectField`, `CurrencyField`), `SearchInput` nas listas e `ConfirmDeleteDialog` (invólucros `Delete<Recurso>Dialog` com textos, action e toast). Valores do banco → formulário com `to<Recurso>FormValues` no arquivo de validação.
+  - **Campo de valor em reais:** `CurrencyField`/`CurrencyInput`. Regras em `src/lib/currency-input.js` (funções puras testadas); o componente só aplica o resultado no `<input>`.
   - Tabela no desktop (`hidden md:block`) + cartões no mobile (`md:hidden`); link "esticado" (`after:absolute after:inset-0`) com as ações em `relative z-10`.
-  - Formatação pt-BR (moeda, %, data) em `src/lib/format.js`.
+  - Formatação pt-BR de % e datas em `src/lib/format.js`; **moeda em `src/lib/money.js`** (recebe centavos).
   - Componente com troca animada (`AnimatePresence`) **não** deve ser filho direto de um `template.js` (o `*:animate-enter` se soma à animação do motion): envolver num `<div>`.
   - Atraso de animação isolado → `style={{ animationDelay }}` (classe `[animation-delay:...]` pode perder para o atalho `animation` do `animate-enter`).
   - shadcn CLI: para não sobrescrever arquivos customizados (ex.: `button.jsx`), rodar `printf 'n
@@ -100,15 +102,21 @@ Pendente também: a **landing page `/`** continua provisória. Refazer antes do 
 - **Rotas com route groups:** `(public)`, `(auth)`, `(dashboard)` conforme o plano. A home está em `src/app/(public)/page.js`.
 - **Finais de linha:** `.gitattributes` força LF; `.vscode/settings.json` usa `files.eol: "\n"`.
 - **VS Code do projeto** (`.vscode/settings.json`): `*.css` associado a `tailwindcss` (evita falsos avisos de `@theme`/`@apply`), autocomplete de classes em `cn()`/`cva()`, `.next` fora da busca/watcher. Extensões recomendadas: Tailwind CSS IntelliSense, ESLint, Prettier (o usuário já tem as três).
-- `package.json` declara `engines.node >= 22.0.0` (o supabase-js 2.117 exige Node 22; o Next 16 sozinho aceitaria 20.9).
+- `package.json` declara `engines.node >= 22.12.0` (supabase-js 2.117 exige Node 22; Vitest 5/Vite 8 exigem 22.12; a máquina do usuário tem 22.14).
+- **Dinheiro = centavos inteiros em todo o app** (banco `bigint`, cálculos, props). Toda conversão texto ↔ centavos passa por `src/lib/money.js`; nunca dividir por 100 para exibir (o `formatCurrency` monta o decimal como texto e o Intl formata exato).
+- **Testes:** Vitest 5 (`npm test` = `vitest run`, `npm run test:watch`), `vitest.config.mjs` com alias `@`, ambiente `node`, arquivos `src/**/*.test.js` ao lado do código. Sem jsdom/Testing Library por enquanto (instalar quando houver teste de componente).
 - Os documentos originais do usuário foram movidos para `docs/`.
 
 ## Problemas conhecidos / avisos
 
-- `npm audit` acusa 5 vulnerabilidades "high" no pacote `braces` (via `fast-glob`/`micromatch`), usado apenas por ferramentas de dev (eslint-plugin-next e CLI do shadcn). Não vai para o bundle do navegador. Não rodar `npm audit fix --force` (quebraria versões).
+- `npm audit` acusa 9 vulnerabilidades "high" (eram 5 até 2026-10-06; o audit passou a contar também os pacotes intermediários da mesma cadeia, e nenhuma vem do Vitest/Vite), todas por causa do pacote `braces` (via `fast-glob`/`micromatch`), usado apenas por ferramentas de dev (eslint-plugin-next e CLI do shadcn). Não vai para o bundle do navegador. Não rodar `npm audit fix --force` (quebraria versões).
 - Testes no Chrome com aba oculta: páginas com `loading.js` (streaming) não revelam nem hidratam o conteúdo (ele fica em `div[hidden]` esperando `requestAnimationFrame`), e capturas de tela expiram. Testar interações em páginas sem streaming; disparar `focusout` (não `blur`) para validação no blur do RHF.
 - Testes no Chrome: se `document.visibilityState === "hidden"` (janela em segundo plano), o clique não move o foco, o teclado não chega, os menus Radix não abrem e as animações só avançam com screenshot. Saídas: setter nativo + evento `input` para preencher campos, `PointerEvent('pointerdown')` para abrir menus Radix e `element.click()` nos itens.
 - Testes no Chrome (Claude in Chrome): o monitor do usuário é ultrawide (viewport ~3018 px CSS) e o screenshot vem reduzido, então **clicar por coordenada erra o alvo**. Usar refs do `find` ou `javascript_tool`. O `resize_window` não muda a viewport: para testar mobile, usar iframes de 390 px (e recarregar a aba depois, porque mexer no `<body>` quebra o React da página).
+- **Testes no Chrome com a conta real do usuário logada (desde 2026-10-07):** testar em **`http://e2e.localhost:3000`** (o dev server aceita subdomínios de localhost sem configurar `allowedDevOrigins`, e os cookies ficam separados da sessão dele em `localhost`). Conta de teste `e2e-<aleatório>@example.com`; na limpeza, apagar **só ela, pelo e-mail** (`delete from auth.users where email = '...'`, com cascade).
+- Testes no Chrome com aba oculta: `setTimeout` é estrangulado (≥ 1 s por espera) e scripts longos estouram os 45 s da ferramenta. Esperar com `MessageChannel` e só digitar depois da hidratação (o input ter `__reactProps…`), senão o RHF regrava o valor padrão. Teclas simuladas: setter nativo + `InputEvent("input", { inputType, data })`; blur com `focusout`; menus Radix com `PointerEvent("pointerdown")` e, no item, `pointerup` + `click()`. Capturas de tela às vezes expiram, mas costumam funcionar logo depois de uma navegação.
+- Ferramenta Bash: um `python - <<'EOF'` com texto longo (aspas triplas, crases) travou sem rodar o Python (2026-10-07). Para editar textos longos, usar as ferramentas Edit/Write. Se usar Python, gravar com `write_bytes` (o `write_text` no Windows grava CRLF).
+- **Detectar CRLF:** `tr -cd '\r' < arquivo | wc -c`. No Git Bash, `grep $'\r'` casa todas as linhas (falso positivo).
 - No Windows, ao parar o `npm run dev` em background, o processo `node` filho pode continuar escutando a porta 3000. Verificar com `Get-NetTCPConnection -LocalPort 3000 -State Listen`, conferir pela linha de comando (`Get-CimInstance Win32_Process`) que é o `next ... start-server.js` do invoiceflow e só então encerrar o PID.
 
 ## Histórico de etapas
@@ -122,6 +130,7 @@ Pendente também: a **landing page `/`** continua provisória. Refazer antes do 
 | 5 | 2026-10-06 | Sprint 3 (parte 1) — telas de autenticação (modo demonstração) + guia do Supabase | [etapa-05-telas-de-autenticacao.md](etapas/etapa-05-telas-de-autenticacao.md) |
 | 6 | 2026-10-06 | Sprint 3 (parte 2) — Supabase Auth real: proxy, /auth/confirm, profiles + RLS | [etapa-06-supabase-auth.md](etapas/etapa-06-supabase-auth.md) |
 | 7 | 2026-10-06 | Sprint 4 — Clientes: CRUD completo com RLS, busca, máscaras e CPF/CNPJ | [etapa-07-clientes.md](etapas/etapa-07-clientes.md) |
+| 8 | 2026-10-07 | Sprint 5 — Serviços: CRUD, dinheiro em centavos, campo de preço testado, Vitest, peças de formulário compartilhadas | [etapa-08-servicos.md](etapas/etapa-08-servicos.md) |
 
 ## Roadmap (do plano de desenvolvimento)
 
@@ -132,7 +141,7 @@ Pendente também: a **landing page `/`** continua provisória. Refazer antes do 
 **Fase 2 — Autenticação & Clientes/Serviços**
 - [x] Sprint 3 — Autenticação (signup, login, logout, recuperação, proxy, profiles)
 - [x] Sprint 4 — Clientes (CRUD, RHF + Zod)
-- [ ] Sprint 5 — Serviços (CRUD)
+- [x] Sprint 5 — Serviços (CRUD, preço em centavos)
 
 **Fase 3 — Quote Builder**
 - [ ] Sprint 6 — Estrutura do construtor

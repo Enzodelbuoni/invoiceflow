@@ -9,8 +9,12 @@ import { Spinner } from "@/components/ui/spinner"
 
 const DEBOUNCE_MS = 300
 
-/** Busca de clientes: escreve `?q=` na URL (o servidor filtra) com debounce. */
-export function ClientSearch({ initialQuery = "" }) {
+/**
+ * Busca das listas (clientes, serviços…): escreve `?q=` na URL com debounce e
+ * a página, no servidor, filtra.
+ * @param {{ initialQuery?: string, label: string, placeholder: string }} props
+ */
+export function SearchInput({ initialQuery = "", label, placeholder }) {
   const router = useRouter()
   const pathname = usePathname()
   const [value, setValue] = useState(initialQuery)
@@ -48,8 +52,8 @@ export function ClientSearch({ initialQuery = "" }) {
         type="search"
         value={value}
         onChange={handleChange}
-        placeholder="Buscar por nome, empresa ou e-mail"
-        aria-label="Buscar clientes"
+        placeholder={placeholder}
+        aria-label={label}
         className="h-full [&::-webkit-search-cancel-button]:hidden"
       />
       {value && (

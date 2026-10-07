@@ -1,25 +1,20 @@
 import { z } from "zod"
 
-import { isValidCnpj, isValidCpf, onlyDigits } from "@/lib/br"
+import { formatDocument, formatPhone, isValidCnpj, isValidCpf, onlyDigits } from "@/lib/br"
+import { charLength, optionalText, requiredText } from "@/lib/validations/text"
 
 // Schema do cliente: valida o formulário (React Hook Form) e é revalidado na
 // Server Action. A saída já vem normalizada para o banco: textos aparados,
 // campos vazios como null, telefone e documento só com dígitos.
-
-/** Texto opcional: "" vira null; senão aplica `max`. */
-const optionalText = (max, label) =>
-  z
-    .string()
-    .trim()
-    .max(max, { error: `${label} pode ter no máximo ${max} caracteres.` })
-    .transform((value) => value || null)
+// Os limites repetem os CHECKs da migração create_clients.
 
 export const clientSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(2, { error: "Informe o nome do cliente." })
-    .max(120, { error: "O nome pode ter no máximo 120 caracteres." }),
+  name: requiredText({
+    min: 2,
+    max: 120,
+    minError: "Informe o nome do cliente.",
+    maxError: "O nome pode ter no máximo 120 caracteres.",
+  }),
   email: z
     .string()
     .trim()
@@ -27,6 +22,7 @@ export const clientSchema = z.object({
     .refine((value) => !value || z.email().safeParse(value).success, {
       error: "Digite um e-mail válido, como nome@empresa.com.",
     })
+    .refine((value) => charLength(value) <= 254, { error: "O e-mail pode ter no máximo 254 caracteres." })
     .transform((value) => value || null),
   phone: z
     .string()
@@ -48,7 +44,7 @@ export const clientSchema = z.object({
 })
 
 /** Valores iniciais do formulário (todos strings, como o RHF espera). */
-export const EMPTY_CLIENT_FORM = {
+export const EMPTY_CLIENT_FORM = Object.freeze({
   name: "",
   email: "",
   phone: "",
@@ -56,4 +52,18 @@ export const EMPTY_CLIENT_FORM = {
   document: "",
   address: "",
   notes: "",
+})
+
+/** Cliente do banco (null, só dígitos) → valores do formulário de edição (strings formatadas). */
+export function toClientFormValues(client) {
+  if (!client) return { ...EMPTY_CLIENT_FORM }
+  return {
+    name: client.name ?? "",
+    email: client.email ?? "",
+    phone: formatPhone(client.phone ?? ""),
+    company: client.company ?? "",
+    document: formatDocument(client.document ?? ""),
+    address: client.address ?? "",
+    notes: client.notes ?? "",
+  }
 }

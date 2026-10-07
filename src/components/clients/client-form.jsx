@@ -10,70 +10,10 @@ import { toast } from "sonner"
 import { createClientAction, updateClientAction } from "@/actions/clients"
 import { FormAlert } from "@/components/auth/form-alert"
 import { SubmitButton } from "@/components/auth/submit-button"
+import { FormSection, TextField, TextareaField } from "@/components/shared/form-fields"
 import { Button } from "@/components/ui/button"
-import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { formatDocument, formatPhone } from "@/lib/br"
-import { EMPTY_CLIENT_FORM, clientSchema } from "@/lib/validations/client"
-
-/** Seção visual do formulário: título + descrição à esquerda, campos à direita. */
-function FormSection({ title, description, children }) {
-  return (
-    <section className="grid gap-6 border-t py-8 first:border-t-0 first:pt-0 md:grid-cols-[minmax(0,14rem)_1fr] md:gap-10">
-      <div className="flex flex-col gap-1">
-        <h2 className="font-medium">{title}</h2>
-        <p className="text-sm text-pretty text-muted-foreground">{description}</p>
-      </div>
-      <div className="grid gap-5 sm:grid-cols-2">{children}</div>
-    </section>
-  )
-}
-
-/** Campo de texto com label, erro ligado por aria-describedby e máscara opcional. */
-function TextField({ form, name, label, hint, mask, className, required, ...inputProps }) {
-  const error = form.formState.errors[name]
-  const describedBy = [hint && `${name}-hint`, error && `${name}-error`].filter(Boolean).join(" ") || undefined
-  const registration = form.register(name)
-  // A máscara é aplicada no próprio evento, ANTES de o RHF ler o valor. (Usar
-  // setValue dentro do onChange faz o RHF pular a revalidação daquele campo.)
-  const onChange = mask
-    ? (event) => {
-        event.target.value = mask(event.target.value)
-        return registration.onChange(event)
-      }
-    : registration.onChange
-
-  return (
-    <Field data-invalid={!!error} className={className}>
-      <FieldLabel htmlFor={name}>
-        {label}
-        {required && (
-          <span aria-hidden="true" className="text-destructive">
-            *
-          </span>
-        )}
-      </FieldLabel>
-      <Input id={name} className="h-10" aria-invalid={!!error} aria-required={required || undefined} aria-describedby={describedBy} {...inputProps} {...registration} onChange={onChange} />
-      {hint && !error && <FieldDescription id={`${name}-hint`}>{hint}</FieldDescription>}
-      <FieldError id={`${name}-error`} errors={[error]} />
-    </Field>
-  )
-}
-
-/** Valores do banco (null, só dígitos) → valores do formulário (strings formatadas). */
-export function toFormValues(client) {
-  if (!client) return EMPTY_CLIENT_FORM
-  return {
-    name: client.name ?? "",
-    email: client.email ?? "",
-    phone: formatPhone(client.phone ?? ""),
-    company: client.company ?? "",
-    document: formatDocument(client.document ?? ""),
-    address: client.address ?? "",
-    notes: client.notes ?? "",
-  }
-}
+import { clientSchema, toClientFormValues } from "@/lib/validations/client"
 
 /**
  * Formulário de cliente (criar ou editar).
@@ -88,7 +28,7 @@ export function ClientForm({ client }) {
   const form = useForm({
     resolver: zodResolver(clientSchema),
     mode: "onTouched",
-    defaultValues: toFormValues(client),
+    defaultValues: toClientFormValues(client),
   })
   const { handleSubmit, setError, formState } = form
 
@@ -130,18 +70,15 @@ export function ClientForm({ client }) {
       </FormSection>
 
       <FormSection title="Observações" description="Anotações internas. O cliente não vê.">
-        <Field data-invalid={!!formState.errors.notes} className="sm:col-span-2">
-          <FieldLabel htmlFor="notes">Observações</FieldLabel>
-          <Textarea
-            id="notes"
-            rows={4}
-            placeholder="Preferências, prazos combinados, como conheceu seu trabalho…"
-            aria-invalid={!!formState.errors.notes}
-            aria-describedby={formState.errors.notes ? "notes-error" : undefined}
-            {...form.register("notes")}
-          />
-          <FieldError id="notes-error" errors={[formState.errors.notes]} />
-        </Field>
+        <TextareaField
+          form={form}
+          name="notes"
+          label="Observações"
+          rows={4}
+          maxLength={2000}
+          placeholder="Preferências, prazos combinados, como conheceu seu trabalho…"
+          className="sm:col-span-2"
+        />
       </FormSection>
 
       <div className="flex flex-col-reverse gap-2 border-t pt-6 sm:flex-row sm:justify-end">

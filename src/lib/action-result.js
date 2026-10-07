@@ -1,0 +1,31 @@
+import "server-only"
+
+import { DataError } from "@/lib/data/shared"
+
+// Formato de retorno das Server Actions:
+//   { ok: true, id? }  ou  { ok: false, message, fieldErrors? }
+// Nunca devolve erros técnicos ao navegador: só mensagens em pt-BR.
+
+const UNEXPECTED = "Algo deu errado. Tente novamente em instantes."
+
+/**
+ * Revalida a entrada com o schema (a action pode ser chamada direto por POST).
+ * Devolve { data } ou { failure } com a primeira mensagem de cada campo.
+ */
+export function parseInput(schema, values) {
+  const result = schema.safeParse(values)
+  if (result.success) return { data: result.data }
+  const fieldErrors = {}
+  for (const issue of result.error.issues) {
+    const field = issue.path[0]
+    if (field && !fieldErrors[field]) fieldErrors[field] = issue.message
+  }
+  return { failure: { ok: false, message: "Confira os campos destacados.", fieldErrors } }
+}
+
+/** Erro → resposta amigável; o que não for DataError é registrado no log do servidor. */
+export function toFailure(scope, error) {
+  if (error instanceof DataError) return { ok: false, message: error.message }
+  console.error(`[${scope}] erro inesperado:`, error)
+  return { ok: false, message: UNEXPECTED }
+}

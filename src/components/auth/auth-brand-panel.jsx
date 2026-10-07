@@ -3,14 +3,15 @@ import { CalculatorIcon, CheckIcon, Link2Icon, SignatureIcon } from "lucide-reac
 
 import { LogoMark, LogoWordmark } from "@/components/brand/logo"
 import { StatusBadge } from "@/components/shared/status-badge"
-import { formatCurrency } from "@/lib/format"
+import { formatCurrency } from "@/lib/money"
 
+// Valores em centavos, como em todo o app.
 const SAMPLE_ITEMS = [
-  { name: "Identidade visual", value: 3200 },
-  { name: "Landing page", value: 2400 },
-  { name: "Social media (3 meses)", value: 1800 },
+  { name: "Identidade visual", valueCents: 320000 },
+  { name: "Landing page", valueCents: 240000 },
+  { name: "Social media (3 meses)", valueCents: 180000 },
 ]
-const SAMPLE_TOTAL = SAMPLE_ITEMS.reduce((sum, item) => sum + item.value, 0)
+const SAMPLE_TOTAL_CENTS = SAMPLE_ITEMS.reduce((sum, item) => sum + item.valueCents, 0)
 
 const HIGHLIGHTS = [
   { label: "Cálculo automático", icon: CalculatorIcon },
@@ -36,13 +37,13 @@ function QuoteMock() {
             {SAMPLE_ITEMS.map((item) => (
               <li key={item.name} className="flex items-center justify-between gap-4 py-2.5">
                 <span className="text-muted-foreground">{item.name}</span>
-                <span className="tabular-nums">{formatCurrency(item.value)}</span>
+                <span className="tabular-nums">{formatCurrency(item.valueCents)}</span>
               </li>
             ))}
           </ul>
           <div className="mt-2 flex items-end justify-between border-t pt-4">
             <span className="text-sm text-muted-foreground">Total</span>
-            <span className="font-display text-3xl leading-none">{formatCurrency(SAMPLE_TOTAL)}</span>
+            <span className="font-display text-3xl leading-none">{formatCurrency(SAMPLE_TOTAL_CENTS)}</span>
           </div>
         </div>
       </div>

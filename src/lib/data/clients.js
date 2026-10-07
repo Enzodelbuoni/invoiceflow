@@ -1,44 +1,17 @@
 import "server-only"
 import { cache } from "react"
 
-import { getCurrentUser } from "@/lib/auth/server"
+import { DataError, getDataContext, isUuid, sanitizeSearch } from "@/lib/data/shared"
 import { isSupabaseConfigured } from "@/lib/supabase/env"
-import { createClient } from "@/lib/supabase/server"
 
-// Camada de acesso a dados dos clientes (recomendação do Next 16: toda leitura e
-// escrita passa por um módulo server-only que confere o usuário).
-// O RLS do banco já isola os dados por usuário; o filtro explícito por user_id
-// aqui é a segunda barreira.
+// Camada de acesso a dados dos clientes (peças comuns em ./shared.js).
 
 const COLUMNS = "id, name, email, phone, company, document, address, notes, created_at, updated_at"
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-export class DataError extends Error {
-  constructor(code, message) {
-    super(message)
-    this.name = "DataError"
-    this.code = code
-  }
-}
-
-async function getContext() {
-  if (!isSupabaseConfigured()) {
-    throw new DataError("not_configured", "Conecte o Supabase (.env.local) para salvar clientes.")
-  }
-  const user = await getCurrentUser()
-  if (!user) throw new DataError("unauthenticated", "Sua sessão expirou. Entre novamente.")
-  return { user, supabase: await createClient() }
-}
-
-// Caracteres especiais do filtro `or` do PostgREST e curingas do ILIKE.
-function sanitizeSearch(term) {
-  return term.replace(/[%_,()*\\]/g, " ").trim().slice(0, 80)
-}
 
 /** Clientes do usuário, em ordem alfabética; `query` busca em nome, empresa e e-mail. */
 export async function listClients({ query = "" } = {}) {
   if (!isSupabaseConfigured()) return []
-  const { user, supabase } = await getContext()
+  const { user, supabase } = await getDataContext()
 
   let request = supabase.from("clients").select(COLUMNS).eq("user_id", user.id).order("name")
   const term = sanitizeSearch(query)
@@ -56,8 +29,8 @@ export async function listClients({ query = "" } = {}) {
  * `cache`: página e generateMetadata pedem o mesmo cliente na mesma requisição.
  */
 export const getClient = cache(async (id) => {
-  if (!UUID_RE.test(String(id))) return null
-  const { user, supabase } = await getContext()
+  if (!isUuid(id)) return null
+  const { user, supabase } = await getDataContext()
   const { data, error } = await supabase
     .from("clients")
     .select(COLUMNS)
@@ -70,7 +43,7 @@ export const getClient = cache(async (id) => {
 
 /** `values` já validados pelo clientSchema. */
 export async function insertClient(values) {
-  const { user, supabase } = await getContext()
+  const { user, supabase } = await getDataContext()
   const { data, error } = await supabase
     .from("clients")
     .insert({ ...values, user_id: user.id })
@@ -81,8 +54,8 @@ export async function insertClient(values) {
 }
 
 export async function updateClient(id, values) {
-  if (!UUID_RE.test(String(id))) throw new DataError("not_found", "Cliente não encontrado.")
-  const { user, supabase } = await getContext()
+  if (!isUuid(id)) throw new DataError("not_found", "Cliente não encontrado.")
+  const { user, supabase } = await getDataContext()
   const { data, error } = await supabase
     .from("clients")
     .update(values)
@@ -96,8 +69,8 @@ export async function updateClient(id, values) {
 }
 
 export async function deleteClient(id) {
-  if (!UUID_RE.test(String(id))) throw new DataError("not_found", "Cliente não encontrado.")
-  const { user, supabase } = await getContext()
+  if (!isUuid(id)) throw new DataError("not_found", "Cliente não encontrado.")
+  const { user, supabase } = await getDataContext()
   const { data, error } = await supabase
     .from("clients")
     .delete()

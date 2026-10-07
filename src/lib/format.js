@@ -1,9 +1,5 @@
 // Formatadores pt-BR. Instâncias de Intl criadas uma vez só (são caras de criar).
-
-const currencyFormatter = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-})
+// Moeda fica em lib/money.js (formatCurrency recebe CENTAVOS inteiros).
 
 const percentFormatter = new Intl.NumberFormat("pt-BR", {
   style: "percent",
@@ -16,11 +12,6 @@ const longDateFormatter = new Intl.DateTimeFormat("pt-BR", {
   month: "long",
   timeZone: "America/Sao_Paulo",
 })
-
-/** 1500 → "R$ 1.500,00" */
-export function formatCurrency(value) {
-  return currencyFormatter.format(value)
-}
 
 /** 0.425 → "42,5%" (recebe fração, não porcentagem) */
 export function formatPercent(fraction) {

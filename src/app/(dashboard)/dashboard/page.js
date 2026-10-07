@@ -5,7 +5,8 @@ import { PageHeader } from "@/components/layout/page-header"
 import { ComingSoonButton } from "@/components/shared/coming-soon-button"
 import { EmptyState } from "@/components/shared/empty-state"
 import { Button } from "@/components/ui/button"
-import { formatCurrency, formatLongDate, formatPercent } from "@/lib/format"
+import { formatLongDate, formatPercent } from "@/lib/format"
+import { formatCurrency } from "@/lib/money"
 import { cn } from "@/lib/utils"
 
 export const metadata = { title: "Dashboard" }
