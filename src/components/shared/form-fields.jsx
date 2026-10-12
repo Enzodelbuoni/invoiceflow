@@ -1,8 +1,8 @@
 "use client"
 
-import { Controller, useWatch } from "react-hook-form"
+import { Controller, get, useWatch } from "react-hook-form"
 
-import { CurrencyInput } from "@/components/shared/currency-input"
+import { CurrencyInput, QuantityInput } from "@/components/shared/decimal-input"
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -12,7 +12,11 @@ import { charLength } from "@/lib/validations/text"
 
 // Peças dos formulários de cadastro (clientes, serviços…), todas ligadas ao
 // React Hook Form pelo `form` (retorno do useForm). Cada campo liga o erro e a
-// dica ao input por aria-describedby e marca aria-invalid.
+// dica ao input por aria-describedby e marca aria-invalid. `name` aceita
+// caminhos de listas ("items.0.name").
+// O id do input (e, a partir dele, os da dica e do erro) é o `name`; passe `id`
+// quando dois formulários na mesma página têm campos com o mesmo nome (ex.: um
+// diálogo de cadastro rápido aberto sobre o construtor de orçamentos).
 
 /** Seção visual do formulário: título + descrição à esquerda, campos à direita. */
 export function FormSection({ title, description, children }) {
@@ -28,16 +32,16 @@ export function FormSection({ title, description, children }) {
 }
 
 /** Estado de acessibilidade comum: erro do campo e ids da dica/erro. */
-function useFieldState(form, name, hint) {
-  const error = form.formState.errors[name]
-  const describedBy = [hint && !error && `${name}-hint`, error && `${name}-error`].filter(Boolean).join(" ") || undefined
+function useFieldState(form, name, id, hint) {
+  const error = get(form.formState.errors, name)
+  const describedBy = [hint && !error && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(" ") || undefined
   return { error, describedBy }
 }
 
-function FieldShell({ name, label, hint, required, error, className, children, aside }) {
+function FieldShell({ id, label, hint, required, error, className, children, aside }) {
   return (
     <Field data-invalid={!!error} className={className}>
-      <FieldLabel htmlFor={name}>
+      <FieldLabel htmlFor={id}>
         {label}
         {required && (
           <span aria-hidden="true" className="text-destructive">
@@ -51,7 +55,7 @@ function FieldShell({ name, label, hint, required, error, className, children, a
         // margem que o shadcn aplica pela posição entre os irmãos).
         <div className="flex items-start justify-between gap-3">
           {hint && !error ? (
-            <FieldDescription id={`${name}-hint`} className="nth-last-2:mt-0">
+            <FieldDescription id={`${id}-hint`} className="nth-last-2:mt-0">
               {hint}
             </FieldDescription>
           ) : (
@@ -60,16 +64,16 @@ function FieldShell({ name, label, hint, required, error, className, children, a
           {aside}
         </div>
       ) : (
-        hint && !error && <FieldDescription id={`${name}-hint`}>{hint}</FieldDescription>
+        hint && !error && <FieldDescription id={`${id}-hint`}>{hint}</FieldDescription>
       )}
-      <FieldError id={`${name}-error`} errors={[error]} />
+      <FieldError id={`${id}-error`} errors={[error]} />
     </Field>
   )
 }
 
 /** Campo de texto com máscara opcional (`mask(texto) → texto`). */
-export function TextField({ form, name, label, hint, mask, className, required, ...inputProps }) {
-  const { error, describedBy } = useFieldState(form, name, hint)
+export function TextField({ form, name, id = name, label, hint, mask, className, required, ...inputProps }) {
+  const { error, describedBy } = useFieldState(form, name, id, hint)
   const registration = form.register(name)
   // A máscara é aplicada no próprio evento, ANTES de o RHF ler o valor. (Usar
   // setValue dentro do onChange faz o RHF pular a revalidação daquele campo.)
@@ -81,9 +85,9 @@ export function TextField({ form, name, label, hint, mask, className, required, 
     : registration.onChange
 
   return (
-    <FieldShell name={name} label={label} hint={hint} required={required} error={error} className={className}>
+    <FieldShell id={id} label={label} hint={hint} required={required} error={error} className={className}>
       <Input
-        id={name}
+        id={id}
         className="h-10"
         aria-invalid={!!error}
         aria-required={required || undefined}
@@ -109,11 +113,11 @@ function CharacterCount({ control, name, max }) {
 }
 
 /** Texto longo; com `maxLength`, mostra um contador (sem bloquear a digitação). */
-export function TextareaField({ form, name, label, hint, maxLength, className, required, ...textareaProps }) {
-  const { error, describedBy } = useFieldState(form, name, hint)
+export function TextareaField({ form, name, id = name, label, hint, maxLength, className, required, ...textareaProps }) {
+  const { error, describedBy } = useFieldState(form, name, id, hint)
   return (
     <FieldShell
-      name={name}
+      id={id}
       label={label}
       hint={hint}
       required={required}
@@ -122,7 +126,7 @@ export function TextareaField({ form, name, label, hint, maxLength, className, r
       aside={maxLength ? <CharacterCount control={form.control} name={name} max={maxLength} /> : null}
     >
       <Textarea
-        id={name}
+        id={id}
         aria-invalid={!!error}
         aria-required={required || undefined}
         aria-describedby={describedBy}
@@ -134,17 +138,17 @@ export function TextareaField({ form, name, label, hint, maxLength, className, r
 }
 
 /** Seletor (Radix) com `options: [{ value, label }]`. */
-export function SelectField({ form, name, label, hint, options, placeholder, className, required }) {
-  const { error, describedBy } = useFieldState(form, name, hint)
+export function SelectField({ form, name, id = name, label, hint, options, placeholder, className, required }) {
+  const { error, describedBy } = useFieldState(form, name, id, hint)
   return (
-    <FieldShell name={name} label={label} hint={hint} required={required} error={error} className={className}>
+    <FieldShell id={id} label={label} hint={hint} required={required} error={error} className={className}>
       <Controller
         control={form.control}
         name={name}
         render={({ field }) => (
           <Select name={field.name} value={field.value} onValueChange={field.onChange}>
             <SelectTrigger
-              id={name}
+              id={id}
               ref={field.ref}
               onBlur={field.onBlur}
               className="w-full data-[size=default]:h-10"
@@ -169,14 +173,31 @@ export function SelectField({ form, name, label, hint, options, placeholder, cla
 }
 
 /** Valor em reais (texto "1.500,00"; o schema converte para centavos). */
-export function CurrencyField({ form, name, label, hint, maxIntegerDigits, className, required, ...inputProps }) {
-  const { error, describedBy } = useFieldState(form, name, hint)
+export function CurrencyField({ form, name, id = name, label, hint, maxIntegerDigits, className, required, ...inputProps }) {
+  const { error, describedBy } = useFieldState(form, name, id, hint)
   return (
-    <FieldShell name={name} label={label} hint={hint} required={required} error={error} className={className}>
+    <FieldShell id={id} label={label} hint={hint} required={required} error={error} className={className}>
       <CurrencyInput
-        id={name}
+        id={id}
         registration={form.register(name)}
         maxIntegerDigits={maxIntegerDigits}
+        aria-invalid={!!error}
+        aria-required={required || undefined}
+        aria-describedby={describedBy}
+        {...inputProps}
+      />
+    </FieldShell>
+  )
+}
+
+/** Quantidade com até 2 casas ("1,5"; o schema converte para centésimos). */
+export function QuantityField({ form, name, id = name, label, hint, className, required, ...inputProps }) {
+  const { error, describedBy } = useFieldState(form, name, id, hint)
+  return (
+    <FieldShell id={id} label={label} hint={hint} required={required} error={error} className={className}>
+      <QuantityInput
+        id={id}
+        registration={form.register(name)}
         aria-invalid={!!error}
         aria-required={required || undefined}
         aria-describedby={describedBy}

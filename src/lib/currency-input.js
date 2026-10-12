@@ -68,6 +68,9 @@ export function editCurrencyInput({
  * "1,500.00" e "12.50" viram o número certo, o que a máscara sozinha (que só
  * aceita o formato brasileiro) erraria.
  *
+ * `format` monta o texto final a partir dos centésimos (o campo de quantidade
+ * usa o mesmo comportamento, mas sem completar ",00").
+ *
  * @returns {{ value: string, caret: number } | { rejected: true } | null}
  *   `null`: colagem parcial; o navegador cola e a máscara do onChange trata.
  *   `rejected`: texto que não é um valor válido (ou acima do teto); nada muda.
@@ -78,6 +81,7 @@ export function pasteIntoCurrencyInput({
   selectionEnd,
   text,
   maxIntegerDigits = MAX_PRICE_INTEGER_DIGITS,
+  format = formatCurrencyInput,
 }) {
   const replacesAll = selectionStart === 0 && selectionEnd === value.length
   if (!replacesAll) return null
@@ -86,7 +90,7 @@ export function pasteIntoCurrencyInput({
   if (cents === null || String(Math.trunc(cents / 100)).length > maxIntegerDigits) {
     return { rejected: true }
   }
-  const formatted = formatCurrencyInput(cents)
+  const formatted = format(cents)
   return { value: formatted, caret: formatted.length }
 }
 

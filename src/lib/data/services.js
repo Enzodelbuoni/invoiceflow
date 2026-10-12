@@ -27,6 +27,22 @@ export async function listServices({ query = "" } = {}) {
 }
 
 /**
+ * Serviços para o catálogo do orçamento: só o que o item copia (snapshot) e a
+ * lista mostra, em ordem alfabética.
+ */
+export async function listServiceOptions() {
+  if (!isSupabaseConfigured()) return []
+  const { user, supabase } = await getDataContext()
+  const { data, error } = await supabase
+    .from("services")
+    .select("id, name, description, unit, price_cents")
+    .eq("user_id", user.id)
+    .order("name")
+  if (error) throw databaseError("services", "query_failed", "Não foi possível carregar os serviços.", error)
+  return data
+}
+
+/**
  * Um serviço do usuário, ou `null` se não existir (ou for de outra pessoa).
  * `cache`: página e generateMetadata pedem o mesmo serviço na mesma requisição.
  */

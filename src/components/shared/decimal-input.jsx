@@ -5,19 +5,24 @@ import { useRef } from "react"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
 import { editCurrencyInput, normalizeCurrencyInput, pasteIntoCurrencyInput } from "@/lib/currency-input"
 import { MAX_PRICE_INTEGER_DIGITS } from "@/lib/money"
+import { editQuantityInput, normalizeQuantityInput, pasteIntoQuantityInput } from "@/lib/quantity"
 import { cn } from "@/lib/utils"
 
 /**
- * Campo de valor em reais ("R$ 1.500,00") para usar com o `register` do RHF.
- * O texto vira centavos no schema (parseCurrencyInput); aqui só cuidamos da
- * digitação. As regras ficam em lib/currency-input.js (testadas).
+ * Campo numérico com vírgula decimal ("1.500,00", "1,5") para usar com o
+ * `register` do RHF. O texto vira número no schema; aqui só cuidamos da
+ * digitação. As regras (`rules`) são funções puras testadas em lib/.
  *
  * A máscara é aplicada no próprio evento, ANTES de o RHF ler o valor: usar
  * setValue dentro do onChange faria o RHF pular a revalidação do campo.
  *
- * @param {{ registration: ReturnType<import("react-hook-form").UseFormRegister<any>>, maxIntegerDigits?: number }} props
+ * @param {{
+ *   registration: ReturnType<import("react-hook-form").UseFormRegister<any>>,
+ *   rules: { edit: Function, paste: Function, normalize: (text: string) => string },
+ *   prefix?: string,
+ * }} props
  */
-export function CurrencyInput({ registration, maxIntegerDigits = MAX_PRICE_INTEGER_DIGITS, className, ...props }) {
+function DecimalInput({ registration, rules, prefix, className, ...props }) {
   const { name, ref, onChange, onBlur } = registration
   // Valor antes de cada edição: para recusar uma tecla (voltar ao anterior) e
   // para saber quando um ponto de milhar foi apagado.
@@ -32,13 +37,12 @@ export function CurrencyInput({ registration, maxIntegerDigits = MAX_PRICE_INTEG
   function handleChange(event) {
     const input = event.target
     const { inputType, data } = event.nativeEvent
-    const next = editCurrencyInput({
+    const next = rules.edit({
       previous: previous.current,
       value: input.value,
       caret: input.selectionStart ?? input.value.length,
       inputType,
       data,
-      maxIntegerDigits,
     })
     apply(input, next.value, next.caret)
     if (!next.rejected) return onChange(event)
@@ -46,12 +50,11 @@ export function CurrencyInput({ registration, maxIntegerDigits = MAX_PRICE_INTEG
 
   function handlePaste(event) {
     const input = event.currentTarget
-    const result = pasteIntoCurrencyInput({
+    const result = rules.paste({
       value: input.value,
       selectionStart: input.selectionStart,
       selectionEnd: input.selectionEnd,
       text: event.clipboardData.getData("text"),
-      maxIntegerDigits,
     })
     if (!result) return // colagem parcial: o navegador cola e o handleChange mascara
     event.preventDefault()
@@ -62,23 +65,24 @@ export function CurrencyInput({ registration, maxIntegerDigits = MAX_PRICE_INTEG
 
   function handleBlur(event) {
     const input = event.target
-    input.value = normalizeCurrencyInput(input.value)
+    input.value = rules.normalize(input.value)
     previous.current = input.value
     return onBlur(event)
   }
 
   return (
     <InputGroup className={cn("h-10", className)}>
-      <InputGroupAddon>
-        <span aria-hidden="true" className="tabular-nums">
-          R$
-        </span>
-      </InputGroupAddon>
+      {prefix && (
+        <InputGroupAddon>
+          <span aria-hidden="true" className="tabular-nums">
+            {prefix}
+          </span>
+        </InputGroupAddon>
+      )}
       <InputGroupInput
         type="text"
         inputMode="decimal"
         autoComplete="off"
-        placeholder="0,00"
         className="h-full tabular-nums"
         {...props}
         name={name}
@@ -92,4 +96,28 @@ export function CurrencyInput({ registration, maxIntegerDigits = MAX_PRICE_INTEG
       />
     </InputGroup>
   )
+}
+
+/**
+ * Valor em reais ("R$ 1.500,00"). Regras em lib/currency-input.js; o schema
+ * converte o texto em centavos (parseCurrencyInput).
+ */
+export function CurrencyInput({ maxIntegerDigits = MAX_PRICE_INTEGER_DIGITS, ...props }) {
+  const rules = {
+    edit: (edit) => editCurrencyInput({ ...edit, maxIntegerDigits }),
+    paste: (paste) => pasteIntoCurrencyInput({ ...paste, maxIntegerDigits }),
+    normalize: normalizeCurrencyInput,
+  }
+  return <DecimalInput placeholder="0,00" prefix="R$" rules={rules} {...props} />
+}
+
+const QUANTITY_RULES = Object.freeze({
+  edit: editQuantityInput,
+  paste: pasteIntoQuantityInput,
+  normalize: normalizeQuantityInput,
+})
+
+/** Quantidade com até 2 casas ("1,5"). Regras em lib/quantity.js (centésimos). */
+export function QuantityInput(props) {
+  return <DecimalInput placeholder="1" rules={QUANTITY_RULES} {...props} />
 }

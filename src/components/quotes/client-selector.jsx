@@ -68,13 +68,18 @@ export function ClientSelector({ form, clients, onClientCreated }) {
   // A lista fecha para o diálogo abrir: aí ela não devolve o foco ao botão,
   // senão tiraria o foco que o diálogo acabou de pôr no campo Nome.
   const openingDialog = useRef(false)
+  // A lista fechou por um clique fora (ex.: em outro campo): o foco fica onde a
+  // pessoa clicou, como o Radix faria sem o preventDefault.
+  const interactedOutside = useRef(false)
   function handlePopoverCloseAutoFocus(event) {
+    event.preventDefault()
+    const outside = interactedOutside.current
+    interactedOutside.current = false
     if (openingDialog.current) {
       openingDialog.current = false
-      event.preventDefault()
       return
     }
-    focusTrigger(event)
+    if (!outside) triggerRef.current?.focus()
   }
 
   function handleOpenChange(next) {
@@ -178,7 +183,14 @@ export function ClientSelector({ form, clients, onClientCreated }) {
     <>
       <Popover open={open} onOpenChange={handleOpenChange}>
         {content}
-        <PopoverContent align="end" className="w-[min(24rem,calc(100vw-2rem))] p-0" onCloseAutoFocus={handlePopoverCloseAutoFocus}>
+        <PopoverContent
+          align="end"
+          className="w-[min(24rem,calc(100vw-2rem))] p-0"
+          onCloseAutoFocus={handlePopoverCloseAutoFocus}
+          onInteractOutside={() => {
+            interactedOutside.current = true
+          }}
+        >
           <Command filter={filterClients}>
             <CommandInput placeholder="Buscar por nome, empresa ou e-mail" value={search} onValueChange={setSearch} />
             <CommandList>
