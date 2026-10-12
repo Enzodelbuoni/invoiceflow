@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { MAX_TOTAL_CENTS, calculateQuoteTotals } from "@/lib/calculations/quote"
+import { DISCOUNT_TYPE, DISCOUNT_TYPE_VALUES } from "@/lib/constants/discount-types"
 import { SERVICE_UNIT, SERVICE_UNIT_VALUES } from "@/lib/constants/service-units"
 import { addDaysIso, formatIsoDateShort, isIsoDate } from "@/lib/dates"
 import { MAX_PRICE_CENTS, formatCurrency, formatCurrencyInput } from "@/lib/money"
@@ -37,16 +39,9 @@ export const VALIDITY_MAX_DAYS = 365
 /** Unidade sugerida num item avulso. */
 export const DEFAULT_ITEM_UNIT = SERVICE_UNIT.UNIT
 
-/**
- * Tipo de desconto (regra 3 do plano: percentual OU valor fixo, nunca os dois).
- * "percent" e "amount" serão os valores de quotes.discount_type (Sprint 10);
- * "none" é só do formulário e vira null no banco.
- */
-export const DISCOUNT_TYPE = Object.freeze({
-  NONE: "none",
-  PERCENT: "percent",
-  AMOUNT: "amount",
-})
+// O tipo de desconto mora em constants/ (o motor de cálculos também usa) e é
+// reexportado daqui por conveniência dos componentes do formulário.
+export { DISCOUNT_TYPE }
 
 /**
  * Valores iniciais de um orçamento novo. `today` ("AAAA-MM-DD", fuso de São
@@ -172,7 +167,9 @@ const taxRateSchema = basisPointsFromText({
  *   notes|null, terms|null,
  * }
  *
- * Ainda não valida "desconto ≤ subtotal": isso depende do motor de cálculos (Sprint 8).
+ * Depois da conversão, confere os totais com o motor de cálculos (Sprint 8):
+ * desconto fixo ≤ subtotal e o teto de R$ 999.999.999,99 por item e no total.
+ * Essa última etapa só roda quando todos os campos já estão válidos.
  */
 export function createQuoteSchema({ today }) {
   const latest = addDaysIso(today, VALIDITY_MAX_DAYS)
@@ -202,7 +199,7 @@ export function createQuoteSchema({ today }) {
         .array(quoteItemSchema)
         .min(1, { error: "Adicione pelo menos um item ao orçamento." })
         .max(QUOTE_LIMITS.items, { error: `O orçamento pode ter no máximo ${QUOTE_LIMITS.items} itens.` }),
-      discount_type: z.enum(Object.values(DISCOUNT_TYPE), { error: "Escolha o tipo de desconto." }),
+      discount_type: z.enum(DISCOUNT_TYPE_VALUES, { error: "Escolha o tipo de desconto." }),
       discount_value: z.string(),
       tax_enabled: z.boolean(),
       tax_rate: z.string(),
@@ -233,6 +230,33 @@ export function createQuoteSchema({ today }) {
         discount_type: discountSchema ? discount_type : null,
         discount_value: discountSchema ? discountSchema.parse(discount_value) : null,
         tax_rate_bps: tax_enabled ? taxRateSchema.parse(tax_rate) : null,
+      }
+    })
+    .superRefine((quote, ctx) => {
+      const totals = calculateQuoteTotals(quote)
+      const limit = formatCurrency(MAX_TOTAL_CENTS)
+      // Os caminhos apontam para os campos do FORMULÁRIO (unit_price, não unit_price_cents).
+      totals.itemSubtotals.forEach((subtotal, index) => {
+        if (subtotal === null) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["items", index, "unit_price"],
+            message: `O total deste item passa do limite de ${limit}.`,
+          })
+        }
+      })
+      if (totals.itemSubtotals.every((subtotal) => subtotal !== null) && totals.subtotal === null) {
+        ctx.addIssue({ code: "custom", path: ["items"], message: `A soma dos itens passa do limite de ${limit}.` })
+      }
+      if (totals.discountExceedsSubtotal) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["discount_value"],
+          message: `O desconto não pode ser maior que o subtotal (${formatCurrency(totals.subtotal)}).`,
+        })
+      }
+      if (totals.subtotal !== null && totals.total === null) {
+        ctx.addIssue({ code: "custom", path: ["tax_rate"], message: `Com o imposto, o total passa do limite de ${limit}.` })
       }
     })
 }

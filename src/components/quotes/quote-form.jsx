@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
@@ -80,6 +80,23 @@ export function QuoteForm({ today, clients, services }) {
     // seguiria a ordem de registro dos campos e não sabe focar a lista de itens).
     shouldFocusError: false,
   })
+
+  // Depois do 1º envio, o RHF revalida só o campo que mudou. Mas alguns erros
+  // dependem dos totais (desconto > subtotal, teto do item e do total): ao
+  // mexer em itens, desconto ou imposto, esses campos são revalidados juntos,
+  // para um erro já corrigido por outro campo não ficar na tela.
+  const { isSubmitted } = form.formState
+  useEffect(() => {
+    if (!isSubmitted) return
+    // subscribe (e não watch): avisa sem re-renderizar e combina com o compilador do React.
+    return form.subscribe({
+      formState: { values: true },
+      callback: ({ name, type }) => {
+        if (type !== "change" || !/^(items|discount_|tax_)/.test(name ?? "")) return
+        form.trigger(["items", "discount_value", "tax_rate"])
+      },
+    })
+  }, [form, isSubmitted])
 
   function onValid() {
     toast.success("Tudo certo com o orçamento", { description: "Salvar como rascunho chega em breve." })

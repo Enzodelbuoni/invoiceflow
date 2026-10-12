@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { SERVICE_UNIT_VALUES } from "@/lib/constants/service-units"
+import { MAX_TOTAL_CENTS } from "@/lib/calculations/quote"
 import { MAX_PRICE_CENTS, formatCurrency } from "@/lib/money"
 
 import {
@@ -291,6 +292,34 @@ describe("createQuoteSchema", () => {
       })
     })
 
+    describe("teto de valores (R$ 999.999.999,99)", () => {
+      const limit = formatCurrency(MAX_TOTAL_CENTS)
+
+      it("item acima do teto: erro no preço daquele item", () => {
+        expect(errorsOf(valid({ items: [item(), item({ quantity: "999.999,99", unit_price: "99.999.999,99" })] }))).toEqual({
+          "items.1.unit_price": `O total deste item passa do limite de ${limit}.`,
+        })
+      })
+
+      it("soma dos itens acima do teto: erro na lista", () => {
+        const big = item({ quantity: "10", unit_price: "99.999.999,99" }) // R$ 999.999.999,90
+        expect(errorsOf(valid({ items: [big, item()] }))).toEqual({ items: `A soma dos itens passa do limite de ${limit}.` })
+      })
+
+      it("imposto levando o total acima do teto: erro na alíquota", () => {
+        const big = item({ quantity: "10", unit_price: "99.999.999,99" })
+        expect(errorsOf(valid({ items: [big], tax_enabled: true, tax_rate: "1" }))).toEqual({
+          tax_rate: `Com o imposto, o total passa do limite de ${limit}.`,
+        })
+      })
+
+      it("a checagem dos totais só roda quando os campos estão válidos", () => {
+        expect(errorsOf(valid({ title: "", discount_type: DISCOUNT_TYPE.AMOUNT, discount_value: "999,00" }))).toEqual({
+          title: "Dê um título ao orçamento.",
+        })
+      })
+    })
+
     it(`no máximo ${QUOTE_LIMITS.items} itens`, () => {
       expect(errorsOf(valid({ items: Array.from({ length: QUOTE_LIMITS.items }, () => item()) }))).toBeNull()
       expect(errorsOf(valid({ items: Array.from({ length: QUOTE_LIMITS.items + 1 }, () => item()) }))).toEqual({
@@ -330,6 +359,14 @@ describe("createQuoteSchema", () => {
       ["101", "A alíquota pode ser no máximo 100%."],
     ])("imposto %j → %s", (value, message) => {
       expect(tax(value)).toEqual({ tax_rate: message })
+    })
+
+    it("desconto fixo não pode passar do subtotal (igual ao subtotal pode)", () => {
+      // 1 × R$ 359,90
+      expect(discount(DISCOUNT_TYPE.AMOUNT, "359,91")).toEqual({
+        discount_value: `O desconto não pode ser maior que o subtotal (${formatCurrency(35990)}).`,
+      })
+      expect(discount(DISCOUNT_TYPE.AMOUNT, "359,90")).toBeNull()
     })
 
     it("erros de desconto e imposto aparecem junto com os dos outros campos", () => {

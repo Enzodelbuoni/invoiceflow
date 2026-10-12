@@ -1,26 +1,69 @@
 "use client"
 
+import { AnimatePresence, motion } from "motion/react"
 import { EyeIcon, SaveIcon } from "lucide-react"
 import { useWatch } from "react-hook-form"
 
 import { ComingSoonButton } from "@/components/shared/coming-soon-button"
 import { Button } from "@/components/ui/button"
+import { MAX_TOTAL_CENTS, calculateQuoteTotals, totalsInputFromForm } from "@/lib/calculations/quote"
+import { DISCOUNT_TYPE } from "@/lib/constants/discount-types"
 import { daysBetweenIso, describeDaysFromToday, formatIsoDateShort } from "@/lib/dates"
 import { formatCurrency } from "@/lib/money"
+import { formatPercentValue } from "@/lib/percent"
+import { cn } from "@/lib/utils"
 
-// Valores zerados até o motor de cálculos (Sprint 8): calculateQuoteTotals(items, discount, tax).
-const EMPTY_TOTALS = Object.freeze({ subtotal: 0, discountTotal: 0, taxTotal: 0, total: 0 })
+const plural = (count) => `${count} ${count === 1 ? "item" : "itens"}`
 
-function SummaryRow({ label, sign, cents }) {
+/** Centavos → "R$ 1.500,00"; `null` (acima do teto) → "—". */
+const money = (cents) => (cents === null ? "—" : formatCurrency(cents))
+
+/**
+ * Linha do resumo. `active = false`: o ajuste não está ligado (valor esmaecido).
+ * `note`: aviso embaixo da linha (ex.: desconto maior que o subtotal).
+ */
+function SummaryRow({ label, sign, cents, active = true, note }) {
   return (
-    <div className="flex items-baseline justify-between gap-4">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="tabular-nums">
-        {sign && <span className="text-muted-foreground">{sign} </span>}
-        {formatCurrency(cents)}
-      </dd>
+    <div className="flex flex-col gap-0.5">
+      <div className="flex items-baseline justify-between gap-4">
+        <dt className="text-muted-foreground">{label}</dt>
+        <dd className={cn("tabular-nums", !active && "text-muted-foreground")}>
+          {sign && cents !== null && <span className="text-muted-foreground">{sign} </span>}
+          {money(cents)}
+        </dd>
+      </div>
+      {note && <p className="text-xs text-destructive">{note}</p>}
     </div>
   )
+}
+
+/**
+ * Valor que troca com uma animação curta (o antigo sobe e some, o novo entra
+ * por baixo). Com movimento reduzido, o MotionConfig global desliga.
+ */
+function AnimatedAmount({ text, className }) {
+  return (
+    <span className={cn("relative inline-flex overflow-hidden", className)}>
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span
+          key={text}
+          initial={{ y: "55%", opacity: 0, filter: "blur(4px)" }}
+          animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+          exit={{ y: "-55%", opacity: 0, filter: "blur(4px)" }}
+          transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+        >
+          {text}
+        </motion.span>
+      </AnimatePresence>
+    </span>
+  )
+}
+
+/** Tamanho do total conforme o comprimento, para R$ 999.999.999,99 caber na coluna. */
+function totalSizeClass(text) {
+  if (text.length <= 12) return "text-4xl"
+  if (text.length <= 15) return "text-3xl"
+  return "text-2xl"
 }
 
 function ValidityLine({ control, today }) {
@@ -35,13 +78,31 @@ function ValidityLine({ control, today }) {
 }
 
 /**
- * Resumo financeiro + ações (QuoteSummary e QuoteActions do plano). No desktop
- * fica fixo ao lado do formulário enquanto a página rola.
+ * Resumo financeiro + ações (QuoteSummary e QuoteActions do plano), calculado
+ * ao vivo pelo motor de cálculos a partir do que está digitado. No desktop fica
+ * fixo ao lado do formulário enquanto a página rola.
  */
 export function QuoteSummary({ control, today, clients }) {
-  const [title, clientId] = useWatch({ control, name: ["title", "client_id"] })
+  const [title, clientId, items, discountType, discountValue, taxEnabled, taxRate] = useWatch({
+    control,
+    name: ["title", "client_id", "items", "discount_type", "discount_value", "tax_enabled", "tax_rate"],
+  })
   const client = clients.find((option) => option.id === clientId)
-  const totals = EMPTY_TOTALS
+
+  const input = totalsInputFromForm({
+    items,
+    discount_type: discountType,
+    discount_value: discountValue,
+    tax_enabled: taxEnabled,
+    tax_rate: taxRate,
+  })
+  const totals = calculateQuoteTotals(input)
+  const itemCount = items?.length ?? 0
+
+  const discountLabel =
+    input.discount_type === DISCOUNT_TYPE.PERCENT ? `Desconto (${formatPercentValue(input.discount_value)})` : "Desconto"
+  const taxLabel = input.tax_rate_bps ? `Impostos (${formatPercentValue(input.tax_rate_bps)})` : "Impostos"
+  const totalText = totals.total === null ? "Acima do limite" : formatCurrency(totals.total)
 
   return (
     <aside
@@ -66,16 +127,33 @@ export function QuoteSummary({ control, today, clients }) {
       </div>
 
       <dl className="flex flex-col gap-2.5 px-5 py-4 text-sm">
-        <SummaryRow label="Subtotal" cents={totals.subtotal} />
-        <SummaryRow label="Desconto" sign="−" cents={totals.discountTotal} />
-        <SummaryRow label="Impostos" sign="+" cents={totals.taxTotal} />
+        <SummaryRow label={itemCount ? `Subtotal (${plural(itemCount)})` : "Subtotal"} cents={totals.subtotal} />
+        <SummaryRow
+          label={discountLabel}
+          sign="−"
+          cents={totals.discountTotal}
+          active={Boolean(input.discount_type)}
+          note={totals.discountExceedsSubtotal ? "O desconto digitado passa do subtotal." : null}
+        />
+        <SummaryRow label={taxLabel} sign="+" cents={totals.taxTotal} active={Boolean(input.tax_rate_bps)} />
       </dl>
 
       <div className="flex flex-col gap-1 border-t bg-muted/40 px-5 py-4 dark:bg-muted/20">
-        <div className="flex items-baseline justify-between gap-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <span className="text-sm font-medium">Total</span>
-          <span className="font-display text-4xl leading-none tabular-nums">{formatCurrency(totals.total)}</span>
+          <AnimatedAmount
+            text={totalText}
+            className={cn(
+              "font-display leading-none tabular-nums",
+              totals.total === null ? "text-2xl text-destructive" : totalSizeClass(totalText),
+            )}
+          />
         </div>
+        {totals.total === null && (
+          <p className="text-xs text-destructive">
+            Os valores passam de {formatCurrency(MAX_TOTAL_CENTS)}. Confira quantidades e preços.
+          </p>
+        )}
         <ValidityLine control={control} today={today} />
       </div>
 

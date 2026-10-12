@@ -7,8 +7,10 @@ import { ArrowDownIcon, ArrowUpIcon, PackageIcon, PencilLineIcon, Trash2Icon } f
 import { CurrencyField, QuantityField, SelectField, TextField, TextareaField } from "@/components/shared/form-fields"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { SERVICE_UNIT_OPTIONS } from "@/lib/constants/service-units"
+import { calculateItemSubtotal } from "@/lib/calculations/quote"
+import { SERVICE_UNIT_OPTIONS, formatServiceUnit } from "@/lib/constants/service-units"
 import { formatCurrency, parseCurrencyInput } from "@/lib/money"
+import { formatQuantity, parseQuantityInput, quantityToNumber } from "@/lib/quantity"
 import { cn } from "@/lib/utils"
 import { QUOTE_LIMITS } from "@/lib/validations/quote"
 
@@ -48,9 +50,41 @@ function UnitPriceField({ form, name, catalogPriceCents, className }) {
 }
 
 /**
+ * Subtotal da linha, ao vivo: "1,5 hora × R$ 150,00" → "R$ 225,00" (motor de
+ * cálculos). Enquanto quantidade ou preço não são números válidos, mostra "—".
+ */
+function ItemSubtotal({ form, path }) {
+  const [quantityText, unit, priceText] = useWatch({
+    control: form.control,
+    name: [path("quantity"), path("unit"), path("unit_price")],
+  })
+  const quantity = parseQuantityInput(quantityText ?? "")
+  const price = parseCurrencyInput(priceText ?? "")
+  const ready = quantity !== null && quantity > 0 && price !== null
+  const subtotal = ready ? calculateItemSubtotal(quantity, price) : null
+
+  let value = "—"
+  if (ready) value = subtotal === null ? "Acima do limite" : formatCurrency(subtotal)
+
+  return (
+    <p className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-t border-dashed px-4 py-2.5 text-sm">
+      <span className="text-muted-foreground tabular-nums">
+        {ready
+          ? `${formatQuantity(quantity)} ${formatServiceUnit(unit, quantityToNumber(quantity))} × ${formatCurrency(price)}`
+          : "Informe quantidade e preço"}
+      </span>
+      {/* ml-auto: se a linha quebrar (valores longos no celular), o valor fica à direita. */}
+      <span className={cn("ml-auto font-medium tabular-nums", ready && subtotal === null && "text-destructive")}>
+        <span className="sr-only">Subtotal do item: </span>
+        {value}
+      </span>
+    </p>
+  )
+}
+
+/**
  * Uma linha do orçamento (QuoteItemRow do plano): nome, descrição, quantidade,
- * unidade e preço unitário, com ações de mover e remover. O subtotal da linha
- * chega com o motor de cálculos (Sprint 8).
+ * unidade e preço unitário, com ações de mover e remover e o subtotal da linha.
  * `fieldId` é o id estável do useFieldArray: os ids dos botões partem dele para
  * o foco voltar ao lugar certo depois de mover ou remover.
  */
@@ -166,6 +200,7 @@ export function QuoteItemRow({ form, index, count, fieldId, fromCatalog, catalog
             />
           </div>
         </div>
+        <ItemSubtotal form={form} path={path} />
       </fieldset>
     </motion.li>
   )
