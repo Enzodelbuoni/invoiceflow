@@ -3,15 +3,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { AnimatePresence } from "motion/react"
 import { toast } from "sonner"
 
 import { ClientSelector } from "@/components/quotes/client-selector"
 import { QuoteAdjustments } from "@/components/quotes/quote-adjustments"
 import { QuoteBasicInfo } from "@/components/quotes/quote-basic-info"
+import { QuoteDraftBanner, QuoteDraftStatus } from "@/components/quotes/quote-draft"
 import { QuoteItems } from "@/components/quotes/quote-items"
 import { QuoteNotes } from "@/components/quotes/quote-notes"
 import { QuoteSection } from "@/components/quotes/quote-section"
 import { QuoteSummary } from "@/components/quotes/quote-summary"
+import { useQuoteDraft } from "@/hooks/use-quote-draft"
 import { countErrors, firstErrorPath } from "@/lib/form-errors"
 import { createEmptyQuoteForm, createQuoteSchema } from "@/lib/validations/quote"
 
@@ -65,12 +68,15 @@ function useOptionsWithCreated(options) {
  * fixo à direita (no celular, o resumo vem depois das seções).
  * Validação com o schema Zod do orçamento (Sprint 7); o salvamento como
  * rascunho chega no Sprint 10, então um envio válido por enquanto só avisa.
- * @param {{ today: string,
+ * Uma cópia do que está sendo digitado fica neste navegador (useQuoteDraft),
+ * para recuperar o orçamento se a aba fechar.
+ * @param {{ today: string, userId: string,
  *   clients: Array<{ id: string, name: string, company: string|null, email: string|null }>,
  *   services: Array<{ id: string, name: string, description: string|null, unit: string, price_cents: number }> }} props
- *   `today` ("AAAA-MM-DD") calculado no servidor; `clients` para o seletor; `services` para o catálogo.
+ *   `today` ("AAAA-MM-DD") calculado no servidor; `userId` separa os rascunhos locais por conta;
+ *   `clients` para o seletor; `services` para o catálogo.
  */
-export function QuoteForm({ today, clients, services }) {
+export function QuoteForm({ today, userId, clients, services }) {
   const schema = useMemo(() => createQuoteSchema({ today }), [today])
   const form = useForm({
     resolver: zodResolver(schema),
@@ -113,52 +119,74 @@ export function QuoteForm({ today, clients, services }) {
 
   const [clientOptions, addCreatedClient] = useOptionsWithCreated(clients)
   const [serviceOptions, addCreatedService] = useOptionsWithCreated(services)
+  const draft = useQuoteDraft({ form, userId, today, clients: clientOptions, services: serviceOptions })
 
   return (
-    <form
-      noValidate
-      onSubmit={form.handleSubmit(onValid, onInvalid)}
-      onKeyDown={preventImplicitSubmit}
-      className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]"
-    >
-      <div className="flex min-w-0 flex-col gap-6">
-        <QuoteSection id="quote-client" step={1} title="Cliente" description="Quem vai receber a proposta.">
-          <ClientSelector form={form} clients={clientOptions} onClientCreated={addCreatedClient} />
-        </QuoteSection>
+    // O aviso de rascunho fica fora do <form> (e o AnimatePresence dentro de
+    // um <div>, não como filho direto do template.js da área privada).
+    <div>
+      <AnimatePresence initial={false}>
+        {draft.pendingDraft && (
+          <QuoteDraftBanner
+            key="quote-draft"
+            draft={draft.pendingDraft}
+            clients={clientOptions}
+            onRestore={draft.restore}
+            onDiscard={draft.discard}
+          />
+        )}
+      </AnimatePresence>
 
-        <QuoteSection
-          id="quote-info"
-          step={2}
-          title="Informações"
-          description="O que está sendo proposto e até quando vale."
-        >
-          <QuoteBasicInfo form={form} today={today} />
-        </QuoteSection>
+      <form
+        noValidate
+        onSubmit={form.handleSubmit(onValid, onInvalid)}
+        onKeyDown={preventImplicitSubmit}
+        className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]"
+      >
+        <div className="flex min-w-0 flex-col gap-6">
+          <QuoteSection id="quote-client" step={1} title="Cliente" description="Quem vai receber a proposta.">
+            <ClientSelector form={form} clients={clientOptions} onClientCreated={addCreatedClient} />
+          </QuoteSection>
 
-        <QuoteSection
-          id="quote-items"
-          step={3}
-          title="Itens"
-          description="Serviços, quantidades e preços. O subtotal é calculado automaticamente."
-        >
-          <QuoteItems form={form} services={serviceOptions} onServiceCreated={addCreatedService} />
-        </QuoteSection>
+          <QuoteSection
+            id="quote-info"
+            step={2}
+            title="Informações"
+            description="O que está sendo proposto e até quando vale."
+          >
+            <QuoteBasicInfo form={form} today={today} />
+          </QuoteSection>
 
-        <QuoteSection id="quote-adjustments" step={4} title="Desconto e impostos" description="Opcionais. Entram no total.">
-          <QuoteAdjustments form={form} />
-        </QuoteSection>
+          <QuoteSection
+            id="quote-items"
+            step={3}
+            title="Itens"
+            description="Serviços, quantidades e preços. O subtotal é calculado automaticamente."
+          >
+            <QuoteItems form={form} services={serviceOptions} onServiceCreated={addCreatedService} />
+          </QuoteSection>
 
-        <QuoteSection
-          id="quote-notes"
-          step={5}
-          title="Observações e termos"
-          description="Condições que o cliente aceita ao aprovar."
-        >
-          <QuoteNotes form={form} />
-        </QuoteSection>
-      </div>
+          <QuoteSection id="quote-adjustments" step={4} title="Desconto e impostos" description="Opcionais. Entram no total.">
+            <QuoteAdjustments form={form} />
+          </QuoteSection>
 
-      <QuoteSummary control={form.control} today={today} clients={clientOptions} />
-    </form>
+          <QuoteSection
+            id="quote-notes"
+            step={5}
+            title="Observações e termos"
+            description="Condições que o cliente aceita ao aprovar."
+          >
+            <QuoteNotes form={form} />
+          </QuoteSection>
+        </div>
+
+        <QuoteSummary
+          control={form.control}
+          today={today}
+          clients={clientOptions}
+          footer={<QuoteDraftStatus userId={userId} active={draft.autosaving} />}
+        />
+      </form>
+    </div>
   )
 }

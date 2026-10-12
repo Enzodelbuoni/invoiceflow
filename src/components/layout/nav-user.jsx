@@ -22,6 +22,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { signOut } from "@/lib/auth/client"
+import { clearQuoteDrafts } from "@/store/quote-draft-store"
 
 function getInitials(name) {
   return name
@@ -50,6 +51,9 @@ export function NavUser({ user }) {
   async function handleSignOut() {
     try {
       await signOut()
+      // O rascunho local do construtor tem dados de clientes e preços: não
+      // deve ficar no navegador depois de sair (computador compartilhado).
+      clearQuoteDrafts()
       toast.success("Você saiu da sua conta.")
       router.push("/login")
     } catch {

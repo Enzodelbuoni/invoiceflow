@@ -6,6 +6,7 @@ import {
   describeDaysFromToday,
   formatIsoDateLong,
   formatIsoDateShort,
+  formatMomentRelative,
   isIsoDate,
   todayIso,
 } from "./dates"
@@ -97,5 +98,26 @@ describe("describeDaysFromToday", () => {
     [-3, "há 3 dias"],
   ])("%i → %s", (days, expected) => {
     expect(describeDaysFromToday(days)).toBe(expected)
+  })
+})
+
+describe("formatMomentRelative (fuso de São Paulo)", () => {
+  // 12/10/2026 15:00 em São Paulo = 18:00 UTC
+  const NOW = new Date("2026-10-12T18:00:00Z")
+
+  it.each([
+    ["2026-10-12T17:32:00Z", "hoje às 14:32"],
+    ["2026-10-12T03:05:00Z", "hoje às 00:05"], // 00:05 em SP, embora ainda seja dia 12 em UTC
+    ["2026-10-12T02:59:00Z", "ontem às 23:59"], // 23:59 do dia 11 em SP, já dia 12 em UTC
+    ["2026-10-11T12:05:00Z", "ontem às 09:05"],
+    ["2026-10-03T21:40:00Z", "3 de out. às 18:40"],
+    ["2025-12-31T23:00:00Z", "31 de dez. de 2025 às 20:00"],
+  ])("%s → %s", (value, text) => {
+    expect(formatMomentRelative(value, NOW)).toBe(text)
+  })
+
+  it("valor inválido → texto vazio", () => {
+    expect(formatMomentRelative("ontem", NOW)).toBe("")
+    expect(formatMomentRelative(undefined, NOW)).toBe("")
   })
 })

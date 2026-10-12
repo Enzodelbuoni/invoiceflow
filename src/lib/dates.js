@@ -89,3 +89,30 @@ export function describeDaysFromToday(days) {
   if (days === -1) return "ontem"
   return days > 0 ? `em ${days} dias` : `há ${-days} dias`
 }
+
+// Momentos (data + hora), como "quando o rascunho foi guardado". Exibidos no fuso de São Paulo.
+const timeFormatter = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: APP_TIME_ZONE })
+const dayMonthFormatter = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short", timeZone: APP_TIME_ZONE })
+const dayMonthYearFormatter = new Intl.DateTimeFormat("pt-BR", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  timeZone: APP_TIME_ZONE,
+})
+
+/**
+ * Momento → "hoje às 14:32", "ontem às 09:05", "3 de out. às 18:40" (outro ano:
+ * "3 de out. de 2025 às 18:40"), no fuso de São Paulo. "" se inválido.
+ */
+export function formatMomentRelative(value, now = new Date()) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ""
+  const time = timeFormatter.format(date)
+  const day = todayIso(date)
+  const today = todayIso(now)
+  const days = daysBetweenIso(day, today)
+  if (days === 0) return `hoje às ${time}`
+  if (days === 1) return `ontem às ${time}`
+  const formatter = day.slice(0, 4) === today.slice(0, 4) ? dayMonthFormatter : dayMonthYearFormatter
+  return `${formatter.format(date)} às ${time}`
+}

@@ -80,9 +80,10 @@ function ValidityLine({ control, today }) {
 /**
  * Resumo financeiro + ações (QuoteSummary e QuoteActions do plano), calculado
  * ao vivo pelo motor de cálculos a partir do que está digitado. No desktop fica
- * fixo ao lado do formulário enquanto a página rola.
+ * fixo ao lado do formulário enquanto a página rola. `footer`: linha embaixo
+ * das ações (o indicador da cópia de segurança local).
  */
-export function QuoteSummary({ control, today, clients }) {
+export function QuoteSummary({ control, today, clients, footer }) {
   const [title, clientId, items, discountType, discountValue, taxEnabled, taxRate] = useWatch({
     control,
     name: ["title", "client_id", "items", "discount_type", "discount_value", "tax_enabled", "tax_rate"],
@@ -167,6 +168,7 @@ export function QuoteSummary({ control, today, clients }) {
           <EyeIcon data-icon="inline-start" />
           Pré-visualizar
         </ComingSoonButton>
+        {footer}
       </div>
     </aside>
   )
