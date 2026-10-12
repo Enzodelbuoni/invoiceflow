@@ -26,28 +26,34 @@ SaaS para freelancers criarem propostas/orçamentos profissionais: clientes, ser
 
 - **Data da última atualização:** 2026-10-12
 - **Local do projeto:** `C:\dev\invoiceflow` (movido para fora do OneDrive na etapa 2 — o caminho antigo em `OneDrive\Área de Trabalho\meus-projetos\invoiceflow` não deve mais ser usado)
-- **Fase:** 3 — Quote Builder. **Sprint 6 em andamento:** partes 1 e 2 ([etapa-09](etapas/etapa-09-construtor-estrutura-e-cliente.md)) e **parte 3 — itens** ([etapa-10](etapas/etapa-10-construtor-itens.md)) ✅ testadas com o banco e commitadas; próxima: parte 4 (desconto e impostos). Fase 2 ✅ completa (Sprints 3, 4 e 5).
+- **Fase:** 3 — Quote Builder. **Sprint 6 ✅ completo:** partes 1 e 2 ([etapa-09](etapas/etapa-09-construtor-estrutura-e-cliente.md)), 3 — itens ([etapa-10](etapas/etapa-10-construtor-itens.md), commitada) e **4 — desconto e impostos** ([etapa-11](etapas/etapa-11-desconto-e-impostos.md), **ainda não commitada**). Próximo: Sprint 7 (schema Zod do orçamento). Fase 2 ✅ completa (Sprints 3, 4 e 5).
 - **Supabase:** o projeto foi pausado por inatividade em 2026-10-12 e o usuário o reativou no mesmo dia (dados intactos). Pode acontecer de novo após ~7 dias sem uso: se o CLI der "Failed to create login role … timeout", conferir `projects list` e pedir ao usuário para reativar (não reativar por conta própria).
 - **Concluído:** Sprint 1 (inicialização). Sprint 2 completo: identidade visual, componentes shadcn, layout da área privada (sidebar inset + header + Sheet no mobile), `StatusBadge`, `EmptyState`, `PageHeader`, tipografia e motion. Sprint 3 completo: telas de auth (RHF + Zod) + **Supabase Auth real** (proxy protegendo rotas, `/auth/confirm`, tabela `profiles` com RLS, testado de ponta a ponta). Sprint 4 completo: **CRUD de clientes** (tabela `clients` + RLS, camada de dados server-only, Server Actions, busca, máscaras e validação de CPF/CNPJ, tabela/cartões, detalhes, edição e exclusão). Sprint 5 completo: **CRUD de serviços** (tabela `services` com `price_cents`, dinheiro em centavos em `money.js`, campo de preço com máscara testada, prévia do item, peças de formulário compartilhadas) — ver [etapa-08](etapas/etapa-08-servicos.md).
-- **Build:** `npm run lint` ✅ · `npm run build` ✅ · `npm test` ✅ (Vitest, 315 testes) · `npm run dev` ✅. Rotas: `/login`, `/signup`, `/forgot-password`, `/reset-password`, área privada (`/dashboard`, `/clients/**`, `/services/**`, `/quotes/new` em construção; `/quotes` e `/settings` ainda vazias) e `/design-system` (vitrine, só em dev).
+- **Build:** `npm run lint` ✅ · `npm run build` ✅ · `npm test` ✅ (Vitest, 353 testes) · `npm run dev` ✅. Rotas: `/login`, `/signup`, `/forgot-password`, `/reset-password`, área privada (`/dashboard`, `/clients/**`, `/services/**`, `/quotes/new` em construção; `/quotes` e `/settings` ainda vazias) e `/design-system` (vitrine, só em dev).
 - **Conta do usuário no banco:** existe uma conta criada por ele no app (1 usuário, 1 perfil, 1 cliente), e o Chrome dele fica logado nela em `localhost:3000`. Em 2026-10-07 ele disse que é **conta de teste dele e pode ser usada ou apagada**. **Desde 2026-10-12 não crio contas de teste pelo navegador** (o cadastro vai para o Supabase Auth, serviço externo): testes com login usam essa sessão já aberta (e o que eu criar nela, eu apago depois, só pelos ids que criei) ou o modo demonstração (ver Problemas conhecidos).
 - **Backend:** **Supabase** (Auth + PostgreSQL + RLS). Projeto `invoiceflow`, ref **`btglemtjexvwperrbfud`**, região `sa-east-1`, Postgres 17, plano Free. Pasta ligada (`supabase link`) e `.env.local` preenchido. O usuário **nunca tinha usado Supabase**: explicar com calma. CLI autenticado na máquina dele (`npx supabase login`).
 - **CLI do Supabase:** usar **`node node_modules/supabase/dist/supabase.js <cmd>`** (o `npx supabase` trava de forma intermitente). Comandos úteis em `memoria/etapas/etapa-06-supabase-auth.md`.
 
 ## Próximo passo
 
-**Sprint 6 — construtor de orçamentos (`/quotes/new`), parte 4: desconto e impostos.** As partes 1, 2 ([etapa-09](etapas/etapa-09-construtor-estrutura-e-cliente.md)) e 3 — itens ([etapa-10](etapas/etapa-10-construtor-itens.md)) estão prontas, testadas com o banco e commitadas.
+**Sprint 7 — React Hook Form + Zod: schema do orçamento.** O Sprint 6 está completo (etapas [09](etapas/etapa-09-construtor-estrutura-e-cliente.md), [10](etapas/etapa-10-construtor-itens.md) e [11](etapas/etapa-11-desconto-e-impostos.md)); a parte 4 (etapa 11) ainda precisa de commit (perguntar ao usuário).
 
-Como retomar (ao abrir a sessão, ler a etapa 10 e `src/components/quotes/`):
-1. **Parte 4 — desconto e impostos** (`quote-adjustments.jsx`): desconto percentual **ou** valor fixo, imposto percentual; precisa de um campo de percentual (máscara + testes). Dá para reaproveitar o `DecimalInput` (`src/components/shared/decimal-input.jsx`) com regras próprias, como o `QuantityInput`.
-2. Depois: Sprint 7 (schema Zod do orçamento, cliente obrigatório, ≥ 1 item, nome do item 2–120, quantidade > 0 e ≤ `MAX_QUANTITY_HUNDREDTHS`, preço ≤ `MAX_PRICE_CENTS`, validade ≥ hoje; erro da lista de itens embaixo dela), Sprint 8 (`calculateQuoteTotals` puro, em centavos, com testes; subtotal de cada linha + resumo), Sprint 9 (Zustand), Sprint 10 (migração + salvar rascunho).
+Como retomar (ao abrir a sessão, ler as etapas 10 e 11, `src/lib/validations/quote.js` e `src/components/quotes/`):
+1. **Sprint 7 — `quoteSchema`** em `src/lib/validations/quote.js` (mesmo estilo de `serviceSchema`: valida os textos do formulário e devolve o formato do banco), ligado ao `useForm` do `QuoteForm` com `zodResolver`:
+   - cliente obrigatório (uuid); título 2–120; descrição ≤ 2000; observações ≤ 2000; termos ≤ 4000 (`QUOTE_LIMITS`; textos via `lib/validations/text.js`);
+   - validade: data válida e ≥ hoje (o `today` vem do servidor; schema montado por função, ex.: `createQuoteSchema({ today })`);
+   - itens: ≥ 1 e ≤ 100; nome 2–120; descrição ≤ 1000; quantidade > 0 e ≤ `MAX_QUANTITY_HUNDREDTHS` (→ centésimos); unidade da lista; preço ≥ 0 e ≤ `MAX_PRICE_CENTS` (→ centavos); `service_id` uuid ou vazio → null;
+   - desconto: tipo da lista; com tipo, valor obrigatório; percentual 0–100% (→ pontos-base); valor fixo ≥ 0 (→ centavos) e, se der para validar no schema, ≤ subtotal; imposto vazio → null, senão 0–100%;
+   - erro da lista de itens (ex.: "Adicione pelo menos um item") embaixo da lista; o `ClientSelector` já mostra o erro de `client_id`;
+   - o envio continua sem salvar (Sprint 10), mas o "Salvar rascunho" pode disparar a validação para mostrar os erros.
+2. Depois: Sprint 8 (`calculateQuoteTotals` puro, em centavos, com testes; subtotal de cada linha + resumo), Sprint 9 (Zustand), Sprint 10 (migração + salvar rascunho).
 
 Decisões já tomadas para essas partes:
 - **Dinheiro em centavos** em tudo (`money.js`); **quantidade em centésimos** (`quantity.js`, até 2 casas); unidade com plural: `formatServiceUnit(unit, quantityToNumber(qtd))` ("1,5 hora").
 - **Sprint 8:** subtotal do item = quantidade (centésimos) × preço (centavos) / 100, com arredondamento definido no sprint. O produto pode passar de `Number.MAX_SAFE_INTEGER` (99.999.999 × 9.999.999.999), então usar **BigInt** ou um teto por item.
 - **Snapshot:** o item copia nome, descrição, unidade e preço do serviço (`createQuoteItem`); o preço pode ser ajustado no orçamento.
 - **Sprint 10 (migração `quotes`/`quote_items`):** `quotes.client_id` → **ON DELETE RESTRICT** (a camada de clientes já traduz o erro 23503); `quote_items.service_id` → **ON DELETE SET NULL**; valores em centavos `bigint`; limites de `QUOTE_LIMITS`.
-- Impostos: regra simples/configurável (plano, regra 4); a base de cálculo (subtotal com ou sem desconto) se decide no Sprint 8.
+- **Desconto/imposto (etapa 11):** `discount_type` (`DISCOUNT_TYPE`: none/percent/amount) + `discount_value`; `tax_rate` (vazio = sem imposto). Percentuais em **pontos-base** (`lib/percent.js`, 12,5% = 1250, 0–100%). **O imposto incide sobre o subtotal COM desconto.** `total = subtotal − desconto + imposto`.
 - Ideia para o Sprint 20: no celular, barra fixa no rodapé com o total e "Salvar".
 
 Pendente também: a **landing page `/`** continua provisória. Refazer antes do deploy.
@@ -99,7 +105,8 @@ Pendente também: a **landing page `/`** continua provisória. Refazer antes do 
   - **Máscara em input com RHF:** `event.target.value = mask(...)` antes de `registration.onChange(event)`. **Nunca** `setValue` dentro do onChange, porque o RHF pula a revalidação.
   - **Formulários (etapa 8):** usar as peças de `src/components/shared/form-fields.jsx` (`FormSection`, `TextField`, `TextareaField` com `maxLength` → contador, `SelectField`, `CurrencyField`), `SearchInput` nas listas e `ConfirmDeleteDialog` (invólucros `Delete<Recurso>Dialog` com textos, action e toast). Valores do banco → formulário com `to<Recurso>FormValues` no arquivo de validação.
   - **Campo de valor em reais:** `CurrencyField`/`CurrencyInput`. Regras em `src/lib/currency-input.js` (funções puras testadas); o componente só aplica o resultado no `<input>`.
-  - **Campos numéricos (etapa 10):** `src/components/shared/decimal-input.jsx` tem o `DecimalInput` genérico (regras `edit`/`paste`/`normalize` vindas de `lib/`) e os invólucros `CurrencyInput` e `QuantityInput`. Um campo novo (ex.: percentual) = funções puras testadas + invólucro.
+  - **Campos numéricos (etapas 10 e 11):** `src/components/shared/decimal-input.jsx` tem o `DecimalInput` genérico (regras `edit`/`paste`/`normalize` vindas de `lib/`, `prefix`/`suffix`) e os invólucros `CurrencyInput` (R$), `QuantityInput` e `PercentInput` (%), com os `*Field` correspondentes em `form-fields.jsx`. Um campo novo = funções puras testadas + invólucro.
+  - **Hook que expõe um ref para o componente alterar:** o lint do React 19 (`react-hooks/immutability`) recusa `valorDoHook.current = …` se o nome não terminar em `Ref`; devolver uma função que altera o ref por dentro (ex.: `focusNext` em `quote-adjustments.jsx`).
   - **Peças de formulário com nomes aninhados e `id` (etapa 10):** os campos de `form-fields.jsx` aceitam `name="items.0.name"` (erro via `get`) e uma prop **`id`** (padrão = `name`). Diálogo de cadastro rápido aberto sobre outro formulário usa ids com prefixo (`service-dialog-description`), senão repete o id `description` do orçamento.
   - **Listas com `useFieldArray` (etapa 10):** `key={field.id}`; ids dos botões da linha a partir do `field.id` (estável ao mover); **foco síncrono** com `useLayoutEffect` + `document.getElementById(...).focus()`, porque o `form.setFocus` do RHF adia com `setTimeout` e a digitação rápida cai no lugar errado; **sem animação de saída (`AnimatePresence`) nas linhas**, porque o item que sai continua registrado no RHF pelo índice antigo. Remover = sem confirmação + "Desfazer" no toast (8 s, fechado ao desmontar).
   - **Popover com lista:** ao fechar por clique fora (`onInteractOutside`), não devolver o foco ao botão (o foco fica onde a pessoa clicou). Vale para `client-selector.jsx` e `service-picker.jsx`.
@@ -154,6 +161,7 @@ Pendente também: a **landing page `/`** continua provisória. Refazer antes do 
 | 8 | 2026-10-07 | Sprint 5 — Serviços: CRUD, dinheiro em centavos, campo de preço testado, Vitest, peças de formulário compartilhadas | [etapa-08-servicos.md](etapas/etapa-08-servicos.md) |
 | 9 | 2026-10-07 | Sprint 6 (partes 1 e 2) — estrutura do construtor de orçamentos, datas, seletor de cliente com busca e cadastro rápido | [etapa-09-construtor-estrutura-e-cliente.md](etapas/etapa-09-construtor-estrutura-e-cliente.md) |
 | 10 | 2026-10-12 | Sprint 6 (parte 3) — itens do orçamento: catálogo, item avulso, quantidade decimal, mover/remover com desfazer, ServiceDialog | [etapa-10-construtor-itens.md](etapas/etapa-10-construtor-itens.md) |
+| 11 | 2026-10-12 | Sprint 6 (parte 4) — desconto (percentual ou valor fixo) e imposto, campo de percentual testado | [etapa-11-desconto-e-impostos.md](etapas/etapa-11-desconto-e-impostos.md) |
 
 ## Roadmap (do plano de desenvolvimento)
 
@@ -167,7 +175,7 @@ Pendente também: a **landing page `/`** continua provisória. Refazer antes do 
 - [x] Sprint 5 — Serviços (CRUD, preço em centavos)
 
 **Fase 3 — Quote Builder**
-- [ ] Sprint 6 — Estrutura do construtor (em andamento: estrutura, seletor de cliente e itens prontos; falta desconto/impostos)
+- [x] Sprint 6 — Estrutura do construtor (cliente, informações, itens, desconto, impostos, observações/termos, resumo)
 - [ ] Sprint 7 — React Hook Form + Zod (useFieldArray)
 - [ ] Sprint 8 — Motor de cálculos (função pura + testes)
 - [ ] Sprint 9 — Zustand (estado de UI)

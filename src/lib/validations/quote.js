@@ -30,6 +30,17 @@ export const DEFAULT_VALIDITY_DAYS = 15
 export const DEFAULT_ITEM_UNIT = SERVICE_UNIT.UNIT
 
 /**
+ * Tipo de desconto (regra 3 do plano: percentual OU valor fixo, nunca os dois).
+ * "percent" e "amount" serão os valores de quotes.discount_type (Sprint 10);
+ * "none" é só do formulário e vira null no banco.
+ */
+export const DISCOUNT_TYPE = Object.freeze({
+  NONE: "none",
+  PERCENT: "percent",
+  AMOUNT: "amount",
+})
+
+/**
  * Valores iniciais de um orçamento novo. `today` ("AAAA-MM-DD", fuso de São
  * Paulo) vem do servidor, para servidor e navegador concordarem na data.
  */
@@ -40,6 +51,11 @@ export function createEmptyQuoteForm({ today }) {
     description: "",
     valid_until: addDaysIso(today, DEFAULT_VALIDITY_DAYS),
     items: [],
+    // Desconto: tipo + valor ("10" se percentual, "150,00" se valor fixo).
+    discount_type: DISCOUNT_TYPE.NONE,
+    discount_value: "",
+    // Imposto: percentual ("5" = 5%); vazio = sem imposto.
+    tax_rate: "",
     notes: "",
     terms: "",
   }

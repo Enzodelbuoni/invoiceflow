@@ -5,6 +5,7 @@ import { useRef } from "react"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
 import { editCurrencyInput, normalizeCurrencyInput, pasteIntoCurrencyInput } from "@/lib/currency-input"
 import { MAX_PRICE_INTEGER_DIGITS } from "@/lib/money"
+import { editPercentInput, normalizePercentInput, pasteIntoPercentInput } from "@/lib/percent"
 import { editQuantityInput, normalizeQuantityInput, pasteIntoQuantityInput } from "@/lib/quantity"
 import { cn } from "@/lib/utils"
 
@@ -19,10 +20,11 @@ import { cn } from "@/lib/utils"
  * @param {{
  *   registration: ReturnType<import("react-hook-form").UseFormRegister<any>>,
  *   rules: { edit: Function, paste: Function, normalize: (text: string) => string },
- *   prefix?: string,
+ *   prefix?: string,   símbolo antes do número ("R$")
+ *   suffix?: string,   símbolo depois do número ("%")
  * }} props
  */
-function DecimalInput({ registration, rules, prefix, className, ...props }) {
+function DecimalInput({ registration, rules, prefix, suffix, className, ...props }) {
   const { name, ref, onChange, onBlur } = registration
   // Valor antes de cada edição: para recusar uma tecla (voltar ao anterior) e
   // para saber quando um ponto de milhar foi apagado.
@@ -94,6 +96,13 @@ function DecimalInput({ registration, rules, prefix, className, ...props }) {
         onPaste={handlePaste}
         onBlur={handleBlur}
       />
+      {suffix && (
+        <InputGroupAddon align="inline-end">
+          <span aria-hidden="true" className="tabular-nums">
+            {suffix}
+          </span>
+        </InputGroupAddon>
+      )}
     </InputGroup>
   )
 }
@@ -120,4 +129,15 @@ const QUANTITY_RULES = Object.freeze({
 /** Quantidade com até 2 casas ("1,5"). Regras em lib/quantity.js (centésimos). */
 export function QuantityInput(props) {
   return <DecimalInput placeholder="1" rules={QUANTITY_RULES} {...props} />
+}
+
+const PERCENT_RULES = Object.freeze({
+  edit: editPercentInput,
+  paste: pasteIntoPercentInput,
+  normalize: normalizePercentInput,
+})
+
+/** Percentual de 0 a 100 com até 2 casas ("12,5 %"). Regras em lib/percent.js (pontos-base). */
+export function PercentInput(props) {
+  return <DecimalInput placeholder="0" suffix="%" rules={PERCENT_RULES} {...props} />
 }

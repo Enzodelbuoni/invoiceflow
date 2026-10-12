@@ -79,7 +79,7 @@ export function QuoteForm({ today, clients, services }) {
         </QuoteSection>
 
         <QuoteSection id="quote-adjustments" step={4} title="Desconto e impostos" description="Opcionais. Entram no total.">
-          <QuoteAdjustments />
+          <QuoteAdjustments form={form} />
         </QuoteSection>
 
         <QuoteSection

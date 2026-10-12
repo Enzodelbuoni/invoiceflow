@@ -2,14 +2,15 @@ import { describe, expect, it } from "vitest"
 
 import { SERVICE_UNIT_VALUES } from "@/lib/constants/service-units"
 
-import { DEFAULT_ITEM_UNIT, QUOTE_LIMITS, createEmptyQuoteForm, createQuoteItem } from "./quote"
+import { DEFAULT_ITEM_UNIT, DISCOUNT_TYPE, QUOTE_LIMITS, createEmptyQuoteForm, createQuoteItem } from "./quote"
 import { serviceSchema } from "./service"
 
 describe("createEmptyQuoteForm", () => {
-  it("começa sem itens e com validade de 15 dias", () => {
+  it("começa sem itens, sem desconto, sem imposto e com validade de 15 dias", () => {
     const form = createEmptyQuoteForm({ today: "2026-10-12" })
     expect(form.items).toEqual([])
     expect(form.valid_until).toBe("2026-10-27")
+    expect(form).toMatchObject({ discount_type: DISCOUNT_TYPE.NONE, discount_value: "", tax_rate: "" })
   })
 })
 

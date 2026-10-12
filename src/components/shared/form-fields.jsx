@@ -2,7 +2,7 @@
 
 import { Controller, get, useWatch } from "react-hook-form"
 
-import { CurrencyInput, QuantityInput } from "@/components/shared/decimal-input"
+import { CurrencyInput, PercentInput, QuantityInput } from "@/components/shared/decimal-input"
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -196,6 +196,23 @@ export function QuantityField({ form, name, id = name, label, hint, className, r
   return (
     <FieldShell id={id} label={label} hint={hint} required={required} error={error} className={className}>
       <QuantityInput
+        id={id}
+        registration={form.register(name)}
+        aria-invalid={!!error}
+        aria-required={required || undefined}
+        aria-describedby={describedBy}
+        {...inputProps}
+      />
+    </FieldShell>
+  )
+}
+
+/** Percentual de 0 a 100% ("12,5"; o schema converte para pontos-base). */
+export function PercentField({ form, name, id = name, label, hint, className, required, ...inputProps }) {
+  const { error, describedBy } = useFieldState(form, name, id, hint)
+  return (
+    <FieldShell id={id} label={label} hint={hint} required={required} error={error} className={className}>
+      <PercentInput
         id={id}
         registration={form.register(name)}
         aria-invalid={!!error}
