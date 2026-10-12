@@ -1,6 +1,6 @@
 "use client"
 
-import { useLayoutEffect, useRef, useState } from "react"
+import { useLayoutEffect, useRef } from "react"
 import { useWatch } from "react-hook-form"
 import { motion } from "motion/react"
 import { BanknoteIcon, PercentIcon, PlusIcon, ReceiptTextIcon, TagIcon, XIcon } from "lucide-react"
@@ -207,11 +207,17 @@ function DiscountRow({ form }) {
 /**
  * Imposto (TaxField do plano): um percentual simples, como o ISS (regra 4 do
  * plano: sem regras fiscais complexas). Incide sobre o subtotal com desconto.
- * Fica aberto enquanto houver valor; abrir sem digitar nada = sem imposto.
+ * `tax_enabled` diz se a linha está aberta; aberta, a alíquota é obrigatória.
  */
 function TaxRow({ form }) {
-  const [open, setOpen] = useState(() => form.getValues("tax_rate") !== "")
+  const open = useWatch({ control: form.control, name: "tax_enabled" })
   const { focusNext, addRef } = useFocusAfterToggle(open)
+
+  function setEnabled(next) {
+    form.setValue("tax_enabled", next, { shouldDirty: true })
+    form.setValue("tax_rate", "", { shouldDirty: true })
+    form.clearErrors("tax_rate")
+  }
 
   return (
     <AdjustmentRow
@@ -224,13 +230,11 @@ function TaxRow({ form }) {
       addRef={addRef}
       onAdd={() => {
         focusNext("tax_rate")
-        setOpen(true)
+        setEnabled(true)
       }}
       onRemove={() => {
         focusNext("add")
-        form.setValue("tax_rate", "", { shouldDirty: true })
-        form.clearErrors("tax_rate")
-        setOpen(false)
+        setEnabled(false)
       }}
     >
       <PercentField

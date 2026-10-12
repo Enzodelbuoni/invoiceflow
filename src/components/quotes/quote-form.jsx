@@ -2,6 +2,8 @@
 
 import { useCallback, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { toast } from "sonner"
 
 import { ClientSelector } from "@/components/quotes/client-selector"
 import { QuoteAdjustments } from "@/components/quotes/quote-adjustments"
@@ -10,9 +12,37 @@ import { QuoteItems } from "@/components/quotes/quote-items"
 import { QuoteNotes } from "@/components/quotes/quote-notes"
 import { QuoteSection } from "@/components/quotes/quote-section"
 import { QuoteSummary } from "@/components/quotes/quote-summary"
-import { createEmptyQuoteForm } from "@/lib/validations/quote"
+import { countErrors, firstErrorPath } from "@/lib/form-errors"
+import { createEmptyQuoteForm, createQuoteSchema } from "@/lib/validations/quote"
 
 const byName = (a, b) => a.name.localeCompare(b.name, "pt-BR")
+
+// Ordem dos campos na tela, para levar o foco ao primeiro erro. Os ids dos
+// campos são os próprios nomes (o seletor de cliente usa "client_id" no botão
+// e o catálogo usa "items" no botão de adicionar).
+const FIELD_ORDER = Object.freeze([
+  "client_id",
+  "title",
+  "description",
+  "valid_until",
+  { name: "items", fields: ["name", "description", "quantity", "unit", "unit_price"] },
+  "discount_value",
+  "tax_rate",
+  "notes",
+  "terms",
+])
+
+/**
+ * Enter num campo de texto não envia o construtor (o envio é só pelo botão):
+ * num formulário grande, um Enter sem querer mostraria erros em tudo. Vale só
+ * para os campos do próprio formulário: os diálogos de cadastro rápido estão
+ * em portais, e o evento chega aqui pela árvore do React, não pela do DOM.
+ */
+function preventImplicitSubmit(event) {
+  if (event.key !== "Enter" || event.nativeEvent.isComposing) return
+  const target = event.target
+  if (target instanceof HTMLInputElement && event.currentTarget.contains(target)) event.preventDefault()
+}
 
 /**
  * Lista do servidor + registros cadastrados pelos diálogos rápidos. A action
@@ -33,18 +63,36 @@ function useOptionsWithCreated(options) {
 /**
  * Construtor de orçamentos: seções numeradas à esquerda e o resumo financeiro
  * fixo à direita (no celular, o resumo vem depois das seções).
- * O schema Zod (Sprint 7) e o salvamento (Sprint 10) ainda não existem, então
- * o envio do formulário não faz nada por enquanto.
+ * Validação com o schema Zod do orçamento (Sprint 7); o salvamento como
+ * rascunho chega no Sprint 10, então um envio válido por enquanto só avisa.
  * @param {{ today: string,
  *   clients: Array<{ id: string, name: string, company: string|null, email: string|null }>,
  *   services: Array<{ id: string, name: string, description: string|null, unit: string, price_cents: number }> }} props
  *   `today` ("AAAA-MM-DD") calculado no servidor; `clients` para o seletor; `services` para o catálogo.
  */
 export function QuoteForm({ today, clients, services }) {
+  const schema = useMemo(() => createQuoteSchema({ today }), [today])
   const form = useForm({
+    resolver: zodResolver(schema),
     mode: "onTouched",
     defaultValues: createEmptyQuoteForm({ today }),
+    // O foco no primeiro erro é feito em onInvalid, na ordem da tela (o RHF
+    // seguiria a ordem de registro dos campos e não sabe focar a lista de itens).
+    shouldFocusError: false,
   })
+
+  function onValid() {
+    toast.success("Tudo certo com o orçamento", { description: "Salvar como rascunho chega em breve." })
+  }
+
+  function onInvalid(errors) {
+    const count = countErrors(errors)
+    toast.error("Confira os campos destacados", {
+      description: count === 1 ? "1 campo precisa de atenção." : `${count} campos precisam de atenção.`,
+    })
+    const path = firstErrorPath(errors, FIELD_ORDER)
+    if (path) document.getElementById(path)?.focus()
+  }
 
   const [clientOptions, addCreatedClient] = useOptionsWithCreated(clients)
   const [serviceOptions, addCreatedService] = useOptionsWithCreated(services)
@@ -52,7 +100,8 @@ export function QuoteForm({ today, clients, services }) {
   return (
     <form
       noValidate
-      onSubmit={(event) => event.preventDefault()}
+      onSubmit={form.handleSubmit(onValid, onInvalid)}
+      onKeyDown={preventImplicitSubmit}
       className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]"
     >
       <div className="flex min-w-0 flex-col gap-6">

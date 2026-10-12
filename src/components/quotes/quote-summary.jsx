@@ -4,6 +4,7 @@ import { EyeIcon, SaveIcon } from "lucide-react"
 import { useWatch } from "react-hook-form"
 
 import { ComingSoonButton } from "@/components/shared/coming-soon-button"
+import { Button } from "@/components/ui/button"
 import { daysBetweenIso, describeDaysFromToday, formatIsoDateShort } from "@/lib/dates"
 import { formatCurrency } from "@/lib/money"
 
@@ -79,10 +80,11 @@ export function QuoteSummary({ control, today, clients }) {
       </div>
 
       <div className="flex flex-col gap-2 border-t p-5">
-        <ComingSoonButton className="h-10 shadow-sm" message="Salvar como rascunho chega depois dos itens e dos cálculos.">
+        {/* Envia o formulário: valida tudo (erros destacados e foco no primeiro). */}
+        <Button type="submit" className="h-10 shadow-sm">
           <SaveIcon data-icon="inline-start" />
           Salvar rascunho
-        </ComingSoonButton>
+        </Button>
         <ComingSoonButton variant="outline" className="h-10" message="A pré-visualização do documento chega na Fase 4.">
           <EyeIcon data-icon="inline-start" />
           Pré-visualizar

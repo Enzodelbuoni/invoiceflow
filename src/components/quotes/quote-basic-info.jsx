@@ -7,7 +7,7 @@ import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui
 import { Input } from "@/components/ui/input"
 import { addDaysIso, daysBetweenIso, describeDaysFromToday, formatIsoDateLong } from "@/lib/dates"
 import { cn } from "@/lib/utils"
-import { QUOTE_LIMITS, VALIDITY_PRESETS } from "@/lib/validations/quote"
+import { QUOTE_LIMITS, VALIDITY_MAX_DAYS, VALIDITY_PRESETS } from "@/lib/validations/quote"
 
 /**
  * Validade da proposta: data + atalhos (7, 15, 30 dias). Embaixo, a data por
@@ -20,7 +20,8 @@ function ValidityField({ form, today }) {
   const longDate = formatIsoDateLong(value)
 
   function choose(daysAhead) {
-    form.setValue("valid_until", addDaysIso(today, daysAhead), { shouldDirty: true, shouldTouch: true })
+    // shouldValidate: sem ele, um erro antigo (ex.: data no passado) ficaria na tela.
+    form.setValue("valid_until", addDaysIso(today, daysAhead), { shouldDirty: true, shouldTouch: true, shouldValidate: true })
   }
 
   return (
@@ -31,6 +32,7 @@ function ValidityField({ form, today }) {
           id="valid_until"
           type="date"
           min={today}
+          max={addDaysIso(today, VALIDITY_MAX_DAYS)}
           className="h-10 sm:w-48"
           aria-invalid={!!error}
           aria-describedby={error ? "valid_until-error" : "valid_until-hint"}

@@ -27,12 +27,8 @@ export function databaseError(scope, code, message, error) {
   return new DataError(code, message)
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-/** Ids vêm da URL: validar antes de consultar evita erro de tipo no Postgres. */
-export function isUuid(value) {
-  return UUID_RE.test(String(value))
-}
+// Ids vêm da URL: validar antes de consultar evita erro de tipo no Postgres.
+export { isUuid } from "@/lib/uuid"
 
 /** Usuário logado + cliente Supabase da requisição; lança DataError se faltar algo. */
 export async function getDataContext() {

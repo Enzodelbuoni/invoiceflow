@@ -1,7 +1,8 @@
 import { z } from "zod"
 
 import { DEFAULT_SERVICE_UNIT, SERVICE_UNIT_VALUES } from "@/lib/constants/service-units"
-import { MAX_PRICE_CENTS, formatCurrency, formatCurrencyInput, parseCurrencyInput } from "@/lib/money"
+import { MAX_PRICE_CENTS, formatCurrency, formatCurrencyInput } from "@/lib/money"
+import { centsFromText } from "@/lib/validations/numbers"
 import { optionalText, requiredText } from "@/lib/validations/text"
 
 // Schema do serviço: valida o formulário (React Hook Form) e é revalidado na
@@ -20,25 +21,10 @@ export const serviceSchema = z
     description: optionalText(1000, "A descrição"),
     unit: z.enum(SERVICE_UNIT_VALUES, { error: "Escolha a unidade de cobrança." }),
     // Texto do campo com máscara ("1.500,00") → centavos inteiros.
-    price: z
-      .string({ error: "Informe o preço." })
-      .trim()
-      .min(1, { error: "Informe o preço." })
-      .transform((text, ctx) => {
-        const cents = parseCurrencyInput(text)
-        if (cents === null) {
-          ctx.addIssue({ code: "custom", message: "Digite um valor válido, como 1.500,00." })
-          return z.NEVER
-        }
-        if (cents > MAX_PRICE_CENTS) {
-          ctx.addIssue({
-            code: "custom",
-            message: `O preço pode ser no máximo ${formatCurrency(MAX_PRICE_CENTS)}.`,
-          })
-          return z.NEVER
-        }
-        return cents
-      }),
+    price: centsFromText({
+      requiredError: "Informe o preço.",
+      maxError: `O preço pode ser no máximo ${formatCurrency(MAX_PRICE_CENTS)}.`,
+    }),
   })
   .transform(({ price, ...service }) => ({ ...service, price_cents: price }))
 

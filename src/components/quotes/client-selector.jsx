@@ -101,10 +101,13 @@ export function ClientSelector({ form, clients, onClientCreated }) {
     setDialogOpen(true)
   }
 
+  // O botão visível leva o id "client_id": é para ele que vai o foco quando o
+  // envio encontra o cliente faltando (QuoteForm → firstErrorPath).
   const trigger = (label, props) => (
     <PopoverTrigger asChild>
       <Button
         ref={triggerRef}
+        id="client_id"
         type="button"
         aria-invalid={!!error}
         aria-describedby={describedBy}
@@ -158,8 +161,18 @@ export function ClientSelector({ form, clients, onClientCreated }) {
         icon={UsersRoundIcon}
         title="Você ainda não tem clientes"
         description="Cadastre o primeiro aqui mesmo. Ele fica salvo para os próximos orçamentos."
+        invalid={!!error}
       >
-        <Button ref={triggerRef} type="button" variant="outline" className="h-9" onClick={() => openDialog()}>
+        <Button
+          ref={triggerRef}
+          id="client_id"
+          type="button"
+          variant="outline"
+          className="h-9"
+          aria-invalid={!!error}
+          aria-describedby={describedBy}
+          onClick={() => openDialog()}
+        >
           <UserRoundPlusIcon data-icon="inline-start" />
           Cadastrar cliente
         </Button>
@@ -171,6 +184,7 @@ export function ClientSelector({ form, clients, onClientCreated }) {
         icon={UserRoundIcon}
         title="Nenhum cliente selecionado"
         description="Escolha quem vai receber a proposta ou cadastre um cliente novo sem sair daqui."
+        invalid={!!error}
       >
         {trigger("Selecionar cliente", { variant: "outline", className: "h-9" })}
       </QuoteSectionEmpty>

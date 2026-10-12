@@ -28,11 +28,17 @@ export function QuoteSection({ id, step, title, description, children, className
 
 /**
  * Estado "ainda vazio" dentro de uma seção: ícone, texto e ações, numa caixa
- * tracejada (o mesmo idioma visual da busca sem resultados).
+ * tracejada (o mesmo idioma visual da busca sem resultados). `invalid`: a
+ * seção é obrigatória e o envio a encontrou vazia (borda na cor de erro).
  */
-export function QuoteSectionEmpty({ icon: Icon, title, description, children }) {
+export function QuoteSectionEmpty({ icon: Icon, title, description, invalid = false, children }) {
   return (
-    <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed px-5 py-7 text-center sm:flex-row sm:text-left">
+    <div
+      className={cn(
+        "flex flex-col items-center gap-4 rounded-xl border border-dashed px-5 py-7 text-center transition-colors sm:flex-row sm:text-left",
+        invalid && "border-destructive/60 bg-destructive/5 dark:bg-destructive/10",
+      )}
+    >
       <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
         <Icon className="size-5" />
       </span>

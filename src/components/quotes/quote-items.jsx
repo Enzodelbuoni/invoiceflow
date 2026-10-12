@@ -9,6 +9,8 @@ import { QuoteItemRow } from "@/components/quotes/quote-item-row"
 import { QuoteSectionEmpty } from "@/components/quotes/quote-section"
 import { ServicePicker } from "@/components/quotes/service-picker"
 import { Button } from "@/components/ui/button"
+import { FieldError } from "@/components/ui/field"
+import { listErrorMessage } from "@/lib/form-errors"
 import { QUOTE_LIMITS, createQuoteItem } from "@/lib/validations/quote"
 
 const plural = (count) => `${count} ${count === 1 ? "item" : "itens"}`
@@ -138,6 +140,18 @@ export function QuoteItems({ form, services, onServiceCreated }) {
 
   const catalogPrice = new Map(services.map((service) => [service.id, service.price_cents]))
 
+  // Erro da lista inteira (ex.: nenhum item). O botão do catálogo leva o id
+  // "items": é para ele que vai o foco quando o envio encontra a lista vazia.
+  const listError = listErrorMessage(form.formState.errors.items)
+  const catalogA11y = {
+    id: "items",
+    "aria-invalid": Boolean(listError),
+    "aria-describedby": listError ? "items-error" : undefined,
+  }
+  const listErrorMessageEl = listError && (
+    <FieldError id="items-error" errors={[{ message: listError }]} className="mt-2" />
+  )
+
   return (
     <>
       <p aria-live="polite" className="sr-only">
@@ -157,6 +171,7 @@ export function QuoteItems({ form, services, onServiceCreated }) {
               <QuoteSectionEmpty
                 icon={ListPlusIcon}
                 title="Nenhum item ainda"
+                invalid={Boolean(listError)}
                 description={
                   services.length
                     ? "Adicione serviços do seu catálogo (nome e preço vêm prontos) ou um item avulso só para este orçamento."
@@ -164,6 +179,7 @@ export function QuoteItems({ form, services, onServiceCreated }) {
                 }
               >
                 {catalogButton({
+                  ...catalogA11y,
                   variant: "outline",
                   className: "h-9",
                   children: (
@@ -175,6 +191,7 @@ export function QuoteItems({ form, services, onServiceCreated }) {
                 })}
                 {blankButton({ variant: "ghost", className: "h-9" })}
               </QuoteSectionEmpty>
+              {listErrorMessageEl}
             </div>
           ) : (
             <div className="flex flex-col gap-4">
@@ -196,6 +213,7 @@ export function QuoteItems({ form, services, onServiceCreated }) {
 
               <div className="flex flex-wrap items-center gap-2">
                 {catalogButton({
+                  ...catalogA11y,
                   variant: "outline",
                   className: "h-9",
                   disabled: full,
@@ -211,6 +229,7 @@ export function QuoteItems({ form, services, onServiceCreated }) {
                   {full ? `Limite de ${QUOTE_LIMITS.items} itens` : plural(fields.length)}
                 </p>
               </div>
+              {listErrorMessageEl}
             </div>
           )
         }

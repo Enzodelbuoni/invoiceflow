@@ -1,6 +1,6 @@
 "use client"
 
-import { useWatch } from "react-hook-form"
+import { get, useWatch } from "react-hook-form"
 import { motion } from "motion/react"
 import { ArrowDownIcon, ArrowUpIcon, PackageIcon, PencilLineIcon, Trash2Icon } from "lucide-react"
 
@@ -60,6 +60,9 @@ export function QuoteItemRow({ form, index, count, fieldId, fromCatalog, catalog
   const position = index + 1
   const name = useWatch({ control: form.control, name: path("name") })
   const itemLabel = name?.trim() ? `“${name.trim()}”` : `item ${position}`
+  // Algum campo desta linha com erro: a borda do item muda de cor, para achar
+  // o item com problema numa lista longa.
+  const hasError = Boolean(get(form.formState.errors, `items.${index}`))
 
   return (
     <motion.li
@@ -77,7 +80,10 @@ export function QuoteItemRow({ form, index, count, fieldId, fromCatalog, catalog
     >
       <fieldset
         aria-labelledby={titleId}
-        className="min-w-0 rounded-xl border bg-background/60 shadow-xs dark:bg-background/30"
+        className={cn(
+          "min-w-0 rounded-xl border bg-background/60 shadow-xs transition-colors dark:bg-background/30",
+          hasError && "border-destructive/50",
+        )}
       >
         <div className="flex items-center gap-2 border-b border-dashed py-2 pr-2 pl-4">
           <h3 id={titleId} className="flex min-w-0 items-center gap-2 text-sm font-medium">
