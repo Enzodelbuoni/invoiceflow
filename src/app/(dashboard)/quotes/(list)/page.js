@@ -71,15 +71,11 @@ function StatusLifecycle() {
   )
 }
 
-/**
- * Título do orçamento. Rascunho: link para a edição que cobre a linha/cartão
- * inteiro. Os demais ganham link quando existir a página interna (Sprint 11).
- */
+/** Título do orçamento: link para o documento que cobre a linha/cartão inteiro. */
 function QuoteTitle({ quote }) {
-  if (quote.status !== "draft") return <span className="truncate font-medium">{quote.title}</span>
   return (
     <Link
-      href={`/quotes/${quote.id}/edit`}
+      href={`/quotes/${quote.id}`}
       className="truncate font-medium outline-none after:absolute after:inset-0 after:rounded-[inherit] hover:underline focus-visible:underline"
     >
       {quote.title}

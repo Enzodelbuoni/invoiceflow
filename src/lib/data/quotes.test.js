@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { getDataContext } from "@/lib/data/shared"
-import { getQuote, insertQuote, toCreateQuoteParams, updateQuote } from "./quotes"
+import { getQuote, getQuoteDocument, insertQuote, toCreateQuoteParams, updateQuote } from "./quotes"
 
 // "server-only" lança erro fora do servidor do Next; aqui ele vira um módulo vazio.
 vi.mock("server-only", () => ({}))
@@ -211,5 +211,38 @@ describe("getQuote", () => {
     getDataContext.mockClear()
     await expect(getQuote("abc")).resolves.toBeNull()
     expect(getDataContext).not.toHaveBeenCalled()
+  })
+})
+
+describe("getQuoteDocument", () => {
+  function mockRow(row) {
+    const maybeSingle = vi.fn(async () => ({ data: row, error: null }))
+    const builder = { select: () => builder, eq: () => builder, maybeSingle }
+    getDataContext.mockResolvedValue({
+      user: { id: "u1", name: "Ana (do cadastro)", email: "ana@exemplo.com" },
+      supabase: { from: () => builder },
+    })
+  }
+
+  it("separa orçamento, cliente e emitente, com os itens em ordem", async () => {
+    mockRow({
+      id: "6f1c1d2e-0000-4000-8000-0000000000f3",
+      quote_number: "2026-001",
+      items: [{ position: 1, name: "B" }, { position: 0, name: "A" }],
+      client: { name: "Cliente" },
+      issuer: { full_name: "Ana Souza", email: "ana@exemplo.com", phone: "11999998888" },
+    })
+    const { quote, client, issuer } = await getQuoteDocument("6f1c1d2e-0000-4000-8000-0000000000f3")
+    expect(quote).not.toHaveProperty("client")
+    expect(quote).not.toHaveProperty("issuer")
+    expect(quote.items.map((item) => item.name)).toEqual(["A", "B"])
+    expect(client).toEqual({ name: "Cliente" })
+    expect(issuer).toEqual({ name: "Ana Souza", email: "ana@exemplo.com", phone: "11999998888" })
+  })
+
+  it("perfil sem nome: usa o nome de exibição do usuário", async () => {
+    mockRow({ id: "x", items: [], client: null, issuer: { full_name: "", email: "ana@exemplo.com", phone: null } })
+    const { issuer } = await getQuoteDocument("6f1c1d2e-0000-4000-8000-0000000000f4")
+    expect(issuer.name).toBe("Ana (do cadastro)")
   })
 })

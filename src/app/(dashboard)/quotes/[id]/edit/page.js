@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
 import { requireUser } from "@/lib/auth/server"
 import { listClientOptions } from "@/lib/data/clients"
+import { getIssuer } from "@/lib/data/profiles"
 import { getQuote } from "@/lib/data/quotes"
 import { listServiceOptions } from "@/lib/data/services"
 import { todayIso } from "@/lib/dates"
@@ -44,7 +45,7 @@ function NotEditable({ quote }) {
         </p>
       </div>
       <Button asChild variant="outline">
-        <Link href="/quotes">Voltar para os orçamentos</Link>
+        <Link href={`/quotes/${quote.id}`}>Ver o orçamento</Link>
       </Button>
     </section>
   )
@@ -52,11 +53,12 @@ function NotEditable({ quote }) {
 
 export default async function EditQuotePage({ params }) {
   const { id } = await params
-  const [user, quote, clients, services] = await Promise.all([
+  const [user, quote, clients, services, issuer] = await Promise.all([
     requireUser(),
     getQuote(id),
     listClientOptions(),
     listServiceOptions(),
+    getIssuer(),
   ])
   if (!quote) notFound()
 
@@ -78,7 +80,14 @@ export default async function EditQuotePage({ params }) {
         title={title}
         description="Altere o que precisar. O total é atualizado enquanto você edita."
       />
-      <QuoteForm today={todayIso()} userId={user.id} clients={clients} services={services} quote={quote} />
+      <QuoteForm
+        today={todayIso()}
+        userId={user.id}
+        clients={clients}
+        services={services}
+        issuer={issuer}
+        quote={quote}
+      />
     </>
   )
 }

@@ -43,6 +43,7 @@ export async function updateQuoteAction(id, expectedUpdatedAt, values) {
   try {
     const { quote_number } = await updateQuote(id, expectedUpdatedAt, data)
     revalidatePath("/quotes")
+    revalidatePath(`/quotes/${id}`)
     return { ok: true, id, quoteNumber: quote_number }
   } catch (error) {
     return toFailure("quotes", error)

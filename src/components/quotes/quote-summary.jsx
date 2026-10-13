@@ -4,7 +4,6 @@ import { AnimatePresence, motion } from "motion/react"
 import { EyeIcon, SaveIcon } from "lucide-react"
 import { useWatch } from "react-hook-form"
 
-import { ComingSoonButton } from "@/components/shared/coming-soon-button"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { MAX_TOTAL_CENTS, calculateQuoteTotals, totalsInputFromForm } from "@/lib/calculations/quote"
@@ -85,8 +84,9 @@ function ValidityLine({ control, today }) {
  * das ações (o indicador da cópia de segurança local). `saving`: o orçamento
  * está sendo salvo (botão desativado com "Salvando…"). `saveLabel`: texto do
  * botão de salvar ("Salvar rascunho" ou, na edição, "Salvar alterações").
+ * `onPreview`: abre a pré-visualização do documento.
  */
-export function QuoteSummary({ control, today, clients, footer, saving = false, saveLabel = "Salvar rascunho" }) {
+export function QuoteSummary({ control, today, clients, footer, onPreview, saving = false, saveLabel = "Salvar rascunho" }) {
   const [title, clientId, items, discountType, discountValue, taxEnabled, taxRate] = useWatch({
     control,
     name: ["title", "client_id", "items", "discount_type", "discount_value", "tax_enabled", "tax_rate"],
@@ -167,10 +167,10 @@ export function QuoteSummary({ control, today, clients, footer, saving = false, 
           {saving ? <Spinner data-icon="inline-start" aria-hidden="true" /> : <SaveIcon data-icon="inline-start" />}
           {saving ? "Salvando…" : saveLabel}
         </Button>
-        <ComingSoonButton variant="outline" className="h-10" message="A pré-visualização do documento chega na Fase 4.">
+        <Button id="quote-preview-trigger" type="button" variant="outline" className="h-10" onClick={onPreview}>
           <EyeIcon data-icon="inline-start" />
           Pré-visualizar
-        </ComingSoonButton>
+        </Button>
         {footer}
       </div>
     </aside>

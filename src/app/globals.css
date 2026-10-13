@@ -2,7 +2,9 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* Dentro de .theme-paper (o documento do orçamento) o tema escuro não vale:
+   o documento é sempre "papel" claro, como no PDF e no que o cliente recebe. */
+@custom-variant dark (&:is(.dark *):not(:is(.theme-paper, .theme-paper *)));
 
 @theme inline {
   --color-background: var(--background);
@@ -99,9 +101,11 @@
   }
 }
 
-:root {
+:root,
+.theme-paper {
   /* Marca InvoiceFlow: índigo (hue 268). Neutros levemente azulados no mesmo hue.
-     Contrastes WCAG AA medidos nas etapas 03 e 04 (memoria/etapas/). */
+     Contrastes WCAG AA medidos nas etapas 03 e 04 (memoria/etapas/).
+     .theme-paper repete os tokens claros num trecho da página (o documento). */
   --background: oklch(1 0 0);
   --foreground: oklch(0.18 0.02 268);
   --card: oklch(1 0 0);
@@ -205,6 +209,12 @@
 }
 
 @layer base {
+  /* Documento do orçamento: sempre claro, com fundo e texto próprios. */
+  .theme-paper {
+    color-scheme: light;
+    background-color: var(--background);
+    color: var(--foreground);
+  }
   * {
     @apply border-border outline-ring/50;
   }
@@ -216,6 +226,9 @@
   }
   html {
     @apply font-sans;
+    /* No celular quem rola é a página: o cabeçalho fixo (h-14) não cobre o
+       que é rolado até a vista. No desktop o painel tem o próprio scroll-pt. */
+    scroll-padding-top: 4rem;
     /* Inter: "a" de um andar e dígitos 4/6/9 abertos, visual mais refinado. */
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     text-rendering: optimizeLegibility;

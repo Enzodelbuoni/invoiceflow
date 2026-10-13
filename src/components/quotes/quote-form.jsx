@@ -14,11 +14,13 @@ import { QuoteBasicInfo } from "@/components/quotes/quote-basic-info"
 import { QuoteDraftBanner, QuoteDraftStatus } from "@/components/quotes/quote-draft"
 import { QuoteItems } from "@/components/quotes/quote-items"
 import { QuoteNotes } from "@/components/quotes/quote-notes"
+import { QuotePreviewDialog } from "@/components/quotes/quote-preview-dialog"
 import { QuoteSection } from "@/components/quotes/quote-section"
 import { QuoteSummary } from "@/components/quotes/quote-summary"
 import { useQuoteDraft } from "@/hooks/use-quote-draft"
 import { countErrors, firstErrorPath } from "@/lib/form-errors"
 import { quoteDraftKey } from "@/lib/quote-draft"
+import { previewQuoteFromForm } from "@/lib/quote-preview"
 import { createEmptyQuoteForm, createQuoteSchema, toQuoteFormValues } from "@/lib/validations/quote"
 
 const byName = (a, b) => a.name.localeCompare(b.name, "pt-BR")
@@ -79,11 +81,13 @@ function useOptionsWithCreated(options) {
  * @param {{ today: string, userId: string,
  *   clients: Array<{ id: string, name: string, company: string|null, email: string|null }>,
  *   services: Array<{ id: string, name: string, description: string|null, unit: string, price_cents: number }>,
- *   quote?: { id: string, quote_number: string, updated_at: string } }} props
+ *   issuer: { name: string, email?: string|null, phone?: string|null },
+ *   quote?: { id: string, quote_number: string, created_at: string, updated_at: string } }} props
  *   `today` ("AAAA-MM-DD") calculado no servidor; `userId` separa os rascunhos locais por conta;
- *   `clients` para o seletor; `services` para o catálogo; `quote` (getQuote) na edição.
+ *   `clients` para o seletor; `services` para o catálogo; `issuer` (getIssuer) para a
+ *   pré-visualização; `quote` (getQuote) na edição.
  */
-export function QuoteForm({ today, userId, clients, services, quote }) {
+export function QuoteForm({ today, userId, clients, services, issuer, quote }) {
   const editing = Boolean(quote)
   const schema = useMemo(() => createQuoteSchema({ today }), [today])
   // Versão de partida: o orçamento em branco ou a versão salva. Memorizada,
@@ -168,7 +172,21 @@ export function QuoteForm({ today, userId, clients, services, quote }) {
     // Antes de sair: a desmontagem do construtor gravaria a cópia local de novo.
     draft.forget()
     toast.success(editing ? "Alterações salvas" : "Rascunho salvo", { description: `Orçamento ${result.quoteNumber}` })
-    startNavigation(() => router.push("/quotes"))
+    startNavigation(() => router.push(`/quotes/${result.id}`))
+  }
+
+  // Pré-visualização: uma foto do formulário no momento do clique (o diálogo é modal).
+  // O conteúdo fica depois de fechar, para a animação de saída não piscar vazia.
+  const [preview, setPreview] = useState(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
+  function openPreview() {
+    const values = form.getValues()
+    const client = clientOptions.find((option) => option.id === values.client_id) ?? null
+    setPreview({
+      quote: previewQuoteFromForm(values, quote ? { quote_number: quote.quote_number, created_at: quote.created_at } : {}),
+      client: client && { name: client.name, company: client.company, email: client.email },
+    })
+    setPreviewOpen(true)
   }
 
   function onInvalid(errors) {
@@ -246,9 +264,18 @@ export function QuoteForm({ today, userId, clients, services, quote }) {
           clients={clientOptions}
           saving={form.formState.isSubmitting || navigating}
           saveLabel={editing ? "Salvar alterações" : "Salvar rascunho"}
+          onPreview={openPreview}
           footer={<QuoteDraftStatus draftKey={draftKey} active={draft.autosaving} />}
         />
       </form>
+
+      <QuotePreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        quote={preview?.quote ?? null}
+        client={preview?.client ?? null}
+        issuer={issuer}
+      />
     </div>
   )
 }
