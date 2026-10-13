@@ -20,13 +20,15 @@ const AUTOSAVE_DELAY_MS = 400
  * @param {{ form: object, userId: string, today: string,
  *   clients: Array<{ id: string }>, services: Array<{ id: string }> }} options
  * @returns {{ pendingDraft: { values: object, savedAt: string } | null,
- *   restore: () => void, discard: () => void, autosaving: boolean }}
+ *   restore: () => void, discard: () => void, forget: () => void, autosaving: boolean }}
  */
 export function useQuoteDraft({ form, userId, today, clients, services }) {
   // "checking": lendo o localStorage · "pending": há rascunho e a pessoa ainda
   // não escolheu · "ready": gravando automaticamente.
   const [status, setStatus] = useState("checking")
   const [pendingDraft, setPendingDraft] = useState(null)
+  // Orçamento já salvo na conta: nenhuma gravação pendente pode recriar a cópia.
+  const forgottenRef = useRef(false)
 
   // O store não hidrata sozinho (skipHydration): o servidor não tem
   // localStorage, e o 1º render do navegador precisa bater com o HTML dele.
@@ -53,7 +55,7 @@ export function useQuoteDraft({ form, userId, today, clients, services }) {
     function flush() {
       clearTimeout(timer)
       timer = null
-      if (!latest) return
+      if (!latest || forgottenRef.current) return
       const values = latest
       latest = null
       const store = useQuoteDraftStore.getState()
@@ -115,5 +117,14 @@ export function useQuoteDraft({ form, userId, today, clients, services }) {
     setStatus("ready")
   }
 
-  return { pendingDraft, restore, discard, autosaving: status === "ready" }
+  /**
+   * O orçamento foi salvo na conta: apaga a cópia local e para de gravar. Chamar
+   * ANTES de sair da página (ao desmontar, o construtor gravaria o que faltava).
+   */
+  function forget() {
+    forgottenRef.current = true
+    useQuoteDraftStore.getState().removeDraft(userId)
+  }
+
+  return { pendingDraft, restore, discard, forget, autosaving: status === "ready" }
 }

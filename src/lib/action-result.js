@@ -11,13 +11,15 @@ const UNEXPECTED = "Algo deu errado. Tente novamente em instantes."
 /**
  * Revalida a entrada com o schema (a action pode ser chamada direto por POST).
  * Devolve { data } ou { failure } com a primeira mensagem de cada campo.
+ * Campos aninhados viram caminhos com pontos, como o React Hook Form usa
+ * ("items.0.name"); erros sem campo (raiz) ficam só na mensagem geral.
  */
 export function parseInput(schema, values) {
   const result = schema.safeParse(values)
   if (result.success) return { data: result.data }
   const fieldErrors = {}
   for (const issue of result.error.issues) {
-    const field = issue.path[0]
+    const field = issue.path.join(".")
     if (field && !fieldErrors[field]) fieldErrors[field] = issue.message
   }
   return { failure: { ok: false, message: "Confira os campos destacados.", fieldErrors } }
@@ -25,7 +27,10 @@ export function parseInput(schema, values) {
 
 /** Erro → resposta amigável; o que não for DataError é registrado no log do servidor. */
 export function toFailure(scope, error) {
-  if (error instanceof DataError) return { ok: false, message: error.message }
+  if (error instanceof DataError) {
+    if (error.field) return { ok: false, message: error.message, fieldErrors: { [error.field]: error.message } }
+    return { ok: false, message: error.message }
+  }
   console.error(`[${scope}] erro inesperado:`, error)
   return { ok: false, message: UNEXPECTED }
 }

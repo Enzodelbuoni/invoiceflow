@@ -1,11 +1,13 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { AnimatePresence } from "motion/react"
 import { toast } from "sonner"
 
+import { createQuoteAction } from "@/actions/quotes"
 import { ClientSelector } from "@/components/quotes/client-selector"
 import { QuoteAdjustments } from "@/components/quotes/quote-adjustments"
 import { QuoteBasicInfo } from "@/components/quotes/quote-basic-info"
@@ -66,10 +68,11 @@ function useOptionsWithCreated(options) {
 /**
  * Construtor de orçamentos: seções numeradas à esquerda e o resumo financeiro
  * fixo à direita (no celular, o resumo vem depois das seções).
- * Validação com o schema Zod do orçamento (Sprint 7); o salvamento como
- * rascunho chega no Sprint 10, então um envio válido por enquanto só avisa.
- * Uma cópia do que está sendo digitado fica neste navegador (useQuoteDraft),
- * para recuperar o orçamento se a aba fechar.
+ * Validação com o schema Zod do orçamento (Sprint 7); "Salvar rascunho" grava
+ * na conta pela Server Action (Sprint 10), que revalida tudo e calcula os
+ * totais no servidor. Uma cópia do que está sendo digitado fica neste
+ * navegador (useQuoteDraft), para recuperar o orçamento se a aba fechar ou o
+ * salvamento falhar; ela é apagada quando o orçamento é salvo.
  * @param {{ today: string, userId: string,
  *   clients: Array<{ id: string, name: string, company: string|null, email: string|null }>,
  *   services: Array<{ id: string, name: string, description: string|null, unit: string, price_cents: number }> }} props
@@ -104,8 +107,41 @@ export function QuoteForm({ today, userId, clients, services }) {
     })
   }, [form, isSubmitted])
 
-  function onValid() {
-    toast.success("Tudo certo com o orçamento", { description: "Salvar como rascunho chega em breve." })
+  const router = useRouter()
+  const [navigating, startNavigation] = useTransition()
+  const [clientOptions, addCreatedClient] = useOptionsWithCreated(clients)
+  const [serviceOptions, addCreatedService] = useOptionsWithCreated(services)
+  const draft = useQuoteDraft({ form, userId, today, clients: clientOptions, services: serviceOptions })
+
+  async function onValid() {
+    // A action revalida com o mesmo schema e calcula os totais no servidor;
+    // mandamos os valores crus do formulário.
+    let result
+    try {
+      result = await createQuoteAction(form.getValues())
+    } catch {
+      // Sem resposta do servidor (rede caiu, servidor fora do ar).
+      toast.error("Não foi possível falar com o servidor", {
+        description: "Confira sua conexão e tente de novo. O orçamento continua guardado neste navegador.",
+      })
+      return
+    }
+
+    if (!result.ok) {
+      const fieldErrors = Object.entries(result.fieldErrors ?? {})
+      for (const [name, message] of fieldErrors) form.setError(name, { type: "server", message })
+      toast.error(result.message, {
+        description: fieldErrors.length ? undefined : "O orçamento continua guardado neste navegador.",
+      })
+      const path = firstErrorPath(form.formState.errors, FIELD_ORDER)
+      if (path) document.getElementById(path)?.focus()
+      return
+    }
+
+    // Antes de sair: a desmontagem do construtor gravaria a cópia local de novo.
+    draft.forget()
+    toast.success("Rascunho salvo", { description: `Orçamento ${result.quoteNumber}` })
+    startNavigation(() => router.push("/quotes"))
   }
 
   function onInvalid(errors) {
@@ -116,10 +152,6 @@ export function QuoteForm({ today, userId, clients, services }) {
     const path = firstErrorPath(errors, FIELD_ORDER)
     if (path) document.getElementById(path)?.focus()
   }
-
-  const [clientOptions, addCreatedClient] = useOptionsWithCreated(clients)
-  const [serviceOptions, addCreatedService] = useOptionsWithCreated(services)
-  const draft = useQuoteDraft({ form, userId, today, clients: clientOptions, services: serviceOptions })
 
   return (
     // O aviso de rascunho fica fora do <form> (e o AnimatePresence dentro de
@@ -184,6 +216,7 @@ export function QuoteForm({ today, userId, clients, services }) {
           control={form.control}
           today={today}
           clients={clientOptions}
+          saving={form.formState.isSubmitting || navigating}
           footer={<QuoteDraftStatus userId={userId} active={draft.autosaving} />}
         />
       </form>

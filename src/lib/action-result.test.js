@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { parseInput, toFailure } from "./action-result"
 import { DataError, isUuid, sanitizeSearch } from "./data/shared"
+import { createEmptyQuoteForm, createQuoteSchema } from "./validations/quote"
 import { serviceSchema } from "./validations/service"
 
 // "server-only" lança erro fora do servidor do Next; aqui ele vira um módulo vazio.
@@ -30,6 +31,20 @@ describe("parseInput (contrato das Server Actions)", () => {
     })
   })
 
+  it("campos aninhados viram caminhos do React Hook Form (items.0.name)", () => {
+    const schema = createQuoteSchema({ today: "2026-10-12" })
+    const values = {
+      ...createEmptyQuoteForm({ today: "2026-10-12" }),
+      title: "Site",
+      items: [{ service_id: "", name: "", description: "", quantity: "0", unit: "unit", unit_price: "10" }],
+    }
+    expect(parseInput(schema, values).failure.fieldErrors).toEqual({
+      client_id: "Escolha quem vai receber a proposta.",
+      "items.0.name": "Informe o nome do item.",
+      "items.0.quantity": "A quantidade precisa ser maior que zero.",
+    })
+  })
+
   it.each([undefined, null, "texto", 42, []])("POST forjado com %j não quebra a action", (values) => {
     const { failure } = parseInput(serviceSchema, values)
     expect(failure).toMatchObject({ ok: false, message: "Confira os campos destacados." })
@@ -44,6 +59,15 @@ describe("toFailure", () => {
       message: "Serviço não encontrado.",
     })
     expect(log).not.toHaveBeenCalled()
+  })
+
+  it("DataError com campo também vira o erro desse campo", () => {
+    const error = new DataError("client_missing", "Este cliente não existe mais.", { field: "client_id" })
+    expect(toFailure("quotes", error)).toEqual({
+      ok: false,
+      message: "Este cliente não existe mais.",
+      fieldErrors: { client_id: "Este cliente não existe mais." },
+    })
   })
 
   it("erro inesperado vira mensagem genérica e vai para o log do servidor", () => {

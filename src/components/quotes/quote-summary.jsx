@@ -6,6 +6,7 @@ import { useWatch } from "react-hook-form"
 
 import { ComingSoonButton } from "@/components/shared/coming-soon-button"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { MAX_TOTAL_CENTS, calculateQuoteTotals, totalsInputFromForm } from "@/lib/calculations/quote"
 import { DISCOUNT_TYPE } from "@/lib/constants/discount-types"
 import { daysBetweenIso, describeDaysFromToday, formatIsoDateShort } from "@/lib/dates"
@@ -81,9 +82,10 @@ function ValidityLine({ control, today }) {
  * Resumo financeiro + ações (QuoteSummary e QuoteActions do plano), calculado
  * ao vivo pelo motor de cálculos a partir do que está digitado. No desktop fica
  * fixo ao lado do formulário enquanto a página rola. `footer`: linha embaixo
- * das ações (o indicador da cópia de segurança local).
+ * das ações (o indicador da cópia de segurança local). `saving`: o orçamento
+ * está sendo salvo (botão desativado com "Salvando…").
  */
-export function QuoteSummary({ control, today, clients, footer }) {
+export function QuoteSummary({ control, today, clients, footer, saving = false }) {
   const [title, clientId, items, discountType, discountValue, taxEnabled, taxRate] = useWatch({
     control,
     name: ["title", "client_id", "items", "discount_type", "discount_value", "tax_enabled", "tax_rate"],
@@ -159,10 +161,10 @@ export function QuoteSummary({ control, today, clients, footer }) {
       </div>
 
       <div className="flex flex-col gap-2 border-t p-5">
-        {/* Envia o formulário: valida tudo (erros destacados e foco no primeiro). */}
-        <Button type="submit" className="h-10 shadow-sm">
-          <SaveIcon data-icon="inline-start" />
-          Salvar rascunho
+        {/* Envia o formulário: valida tudo (erros destacados e foco no primeiro) e salva na conta. */}
+        <Button type="submit" disabled={saving} aria-busy={saving || undefined} className="h-10 shadow-sm">
+          {saving ? <Spinner data-icon="inline-start" aria-hidden="true" /> : <SaveIcon data-icon="inline-start" />}
+          {saving ? "Salvando…" : "Salvar rascunho"}
         </Button>
         <ComingSoonButton variant="outline" className="h-10" message="A pré-visualização do documento chega na Fase 4.">
           <EyeIcon data-icon="inline-start" />

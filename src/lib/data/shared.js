@@ -9,11 +9,16 @@ import { createClient } from "@/lib/supabase/server"
 // O RLS do banco já isola os dados por usuário; o filtro explícito por user_id
 // em cada consulta é a segunda barreira.
 
+/**
+ * Erro com mensagem amigável (pt-BR) que pode ir para a tela. `field`: campo
+ * do formulário a que a mensagem se refere (vira um fieldError da action).
+ */
 export class DataError extends Error {
-  constructor(code, message) {
+  constructor(code, message, { field } = {}) {
     super(message)
     this.name = "DataError"
     this.code = code
+    if (field) this.field = field
   }
 }
 
