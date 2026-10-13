@@ -3,6 +3,7 @@ import { DISCOUNT_TYPE } from "@/lib/constants/discount-types"
 import { formatServiceUnit } from "@/lib/constants/service-units"
 import { formatIsoDateLong, formatIsoDateShort } from "@/lib/dates"
 import { formatShortDate } from "@/lib/format"
+import { initials } from "@/lib/initials"
 import { formatCurrency } from "@/lib/money"
 import { formatPercentValue } from "@/lib/percent"
 import { formatQuantity, quantityToNumber } from "@/lib/quantity"
@@ -21,14 +22,6 @@ const money = (cents) => (cents === null || cents === undefined ? "—" : format
 
 /** Data "AAAA-MM-DD" → "28 de out. de 2026"; vazia ou inválida → "—". */
 const shortDate = (iso) => formatIsoDateShort(iso) || "—"
-
-/** "Ana Souza" → "AS"; "Estúdio" → "ES". */
-function initials(name) {
-  const words = name.trim().split(/\s+/).filter(Boolean)
-  if (words.length === 0) return "?"
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
-  return (words[0][0] + words.at(-1)[0]).toUpperCase()
-}
 
 /** "1,5 hora", "10 horas", "2 projetos". */
 function quantityLabel(item) {

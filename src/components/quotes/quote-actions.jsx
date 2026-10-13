@@ -7,6 +7,7 @@ import {
   BanIcon,
   CopyIcon,
   EllipsisIcon,
+  ExternalLinkIcon,
   LinkIcon,
   PencilLineIcon,
   SendIcon,
@@ -16,7 +17,6 @@ import {
 import { toast } from "sonner"
 
 import { cancelQuoteAction, deleteQuoteAction, sendQuoteAction } from "@/actions/quotes"
-import { ComingSoonButton } from "@/components/shared/coming-soon-button"
 import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog"
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog"
 import { Button } from "@/components/ui/button"
@@ -30,6 +30,22 @@ import {
 import { useDuplicateQuote } from "@/hooks/use-duplicate-quote"
 import { formatIsoDateShort } from "@/lib/dates"
 import { formatCurrency } from "@/lib/money"
+
+/** Endereço da página pública da proposta (o cliente abre sem login). */
+function publicQuoteUrl(publicId) {
+  return `${window.location.origin}/quote/${publicId}`
+}
+
+/** Copia o link da proposta, com aviso (e o link no aviso, se a cópia falhar). */
+async function copyQuoteLink(quote) {
+  const url = publicQuoteUrl(quote.public_id)
+  try {
+    await navigator.clipboard.writeText(url)
+    toast.success("Link copiado", { description: "Cole na conversa com o cliente. Ele abre sem precisar de conta." })
+  } catch {
+    toast.info("Copie o link da proposta", { description: url, duration: 15000 })
+  }
+}
 
 /** Resumo do que vai ser enviado, dentro da confirmação. */
 function SendSummary({ quote, clientName, validityPassed }) {
@@ -64,10 +80,10 @@ function SendSummary({ quote, clientName, validityPassed }) {
 /**
  * Ações da página do orçamento, conforme o status (máquina de estados do
  * Sprint 12): rascunho → editar, enviar, excluir; enviado/visualizado →
- * copiar link (Sprint 14) e cancelar; qualquer status → duplicar como novo
- * rascunho (Sprint 13). Cada mudança de status passa por uma confirmação e por
+ * copiar link e cancelar; fora do rascunho → abrir a página do cliente;
+ * qualquer status → duplicar como novo rascunho (Sprint 13). Cada mudança de status passa por uma confirmação e por
  * uma função do banco que confere o status de novo.
- * @param {{ quote: { id: string, quote_number: string, status: string, total_cents: number, valid_until: string },
+ * @param {{ quote: { id: string, public_id: string, quote_number: string, status: string, total_cents: number, valid_until: string },
  *   clientName: string|null, today: string }} props
  */
 export function QuoteActions({ quote, clientName, today }) {
@@ -96,10 +112,10 @@ export function QuoteActions({ quote, clientName, today }) {
         </>
       )}
       {isOpen && (
-        <ComingSoonButton variant="outline" className="h-10" message="O link para o cliente ver e aprovar chega em breve.">
+        <Button variant="outline" className="h-10" onClick={() => copyQuoteLink(quote)}>
           <LinkIcon data-icon="inline-start" />
           Copiar link
-        </ComingSoonButton>
+        </Button>
       )}
 
       <DropdownMenu>
@@ -110,6 +126,14 @@ export function QuoteActions({ quote, clientName, today }) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-52">
+          {!isDraft && (
+            <DropdownMenuItem asChild>
+              <a href={`/quote/${quote.public_id}`} target="_blank" rel="noopener noreferrer">
+                <ExternalLinkIcon />
+                Abrir página do cliente
+              </a>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem disabled={duplicating} onSelect={() => duplicate(quote)}>
             <CopyIcon />
             Duplicar como novo rascunho
@@ -140,7 +164,10 @@ export function QuoteActions({ quote, clientName, today }) {
         icon={<SendIcon data-icon="inline-start" />}
         action={() => sendQuoteAction(quote.id)}
         onDone={() =>
-          toast.success("Orçamento enviado", { description: `Orçamento ${quote.quote_number} travado e pronto para o cliente.` })
+          toast.success("Orçamento enviado", {
+            description: "Agora copie o link e mande para o cliente.",
+            action: { label: "Copiar link", onClick: () => copyQuoteLink(quote) },
+          })
         }
       >
         <SendSummary quote={quote} clientName={clientName} validityPassed={validityPassed} />

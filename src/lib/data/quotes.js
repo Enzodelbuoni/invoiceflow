@@ -26,7 +26,7 @@ const QUOTE_COLUMNS = [
 // aparecem na proposta. Só no servidor (a edição não recebe estes dados).
 const DOCUMENT_COLUMNS = [
   QUOTE_COLUMNS,
-  "sent_at",
+  "public_id, sent_at",
   "client:clients(name, company, email, phone, document, address)",
   "issuer:profiles(full_name, email, phone)",
 ].join(", ")
