@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { parseInput, toFailure } from "@/lib/action-result"
-import { insertQuote, updateQuote } from "@/lib/data/quotes"
+import { cancelQuote, deleteQuote, insertQuote, sendQuote, updateQuote } from "@/lib/data/quotes"
 import { todayIso } from "@/lib/dates"
 import { createQuoteSchema } from "@/lib/validations/quote"
 
@@ -45,6 +45,41 @@ export async function updateQuoteAction(id, expectedUpdatedAt, values) {
     revalidatePath("/quotes")
     revalidatePath(`/quotes/${id}`)
     return { ok: true, id, quoteNumber: quote_number }
+  } catch (error) {
+    return toFailure("quotes", error)
+  }
+}
+
+/** Envia o rascunho (status → sent). O documento fica travado a partir daqui. */
+export async function sendQuoteAction(id) {
+  try {
+    await sendQuote(id)
+    revalidatePath("/quotes")
+    revalidatePath(`/quotes/${id}`)
+    return { ok: true }
+  } catch (error) {
+    return toFailure("quotes", error)
+  }
+}
+
+/** Cancela o orçamento (rascunho, enviado ou visualizado). */
+export async function cancelQuoteAction(id) {
+  try {
+    await cancelQuote(id)
+    revalidatePath("/quotes")
+    revalidatePath(`/quotes/${id}`)
+    return { ok: true }
+  } catch (error) {
+    return toFailure("quotes", error)
+  }
+}
+
+/** Exclui um rascunho. */
+export async function deleteQuoteAction(id) {
+  try {
+    await deleteQuote(id)
+    revalidatePath("/quotes")
+    return { ok: true }
   } catch (error) {
     return toFailure("quotes", error)
   }

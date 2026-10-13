@@ -122,8 +122,8 @@ begin
   end;
   perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
 
-  -- Marca como enviado (por enquanto um UPDATE direto ainda pode: Sprint 12).
-  update public.quotes set status = 'sent', sent_at = now() where id = q1;
+  -- Marca como enviado (desde a etapa 19, só pela função send_quote).
+  perform public.send_quote(q1);
 
   -- U8: enviado não é editado pela função → 55000
   begin
@@ -132,7 +132,7 @@ begin
   exception when object_not_in_prerequisite_state then passed := passed + 1;
   end;
 
-  -- U9: enviado: UPDATE direto do conteúdo → 55000; mudança de status continua possível
+  -- U9: enviado: UPDATE direto do conteúdo → 55000; e do status também (etapa 19)
   begin
     update public.quotes set total_cents = 1, subtotal_cents = 1 where id = q1;
     failures := failures || ' U9a';
@@ -143,9 +143,11 @@ begin
     failures := failures || ' U9b';
   exception when object_not_in_prerequisite_state then passed := passed + 1;
   end;
-  update public.quotes set status = 'viewed' where id = q1;
-  get diagnostics n = row_count;
-  if n = 1 then passed := passed + 1; else failures := failures || ' U9c'; end if;
+  begin
+    update public.quotes set status = 'viewed' where id = q1;
+    failures := failures || ' U9c';
+  exception when object_not_in_prerequisite_state then passed := passed + 1;
+  end;
 
   -- U10: itens de orçamento enviado: inserir, alterar e excluir → 55000
   begin
@@ -176,7 +178,7 @@ begin
   select count(*) into n from public.quote_items where quote_id = q2;
   if n = 1 then passed := passed + 1; else failures := failures || ' U12'; end if;
 
-  -- U13: excluir um orçamento (enviado ou rascunho) apaga os itens em cascata sem esbarrar na guarda
+  -- U13: excluir um rascunho apaga os itens em cascata sem esbarrar na guarda
   delete from public.quotes where id = q2;
   select count(*) into n from public.quote_items where quote_id = q2;
   if n = 0 then passed := passed + 1; else failures := failures || ' U13'; end if;
@@ -190,7 +192,7 @@ begin
   exception when insufficient_privilege then passed := passed + 1;
   end;
 
-  -- U15: excluir a CONTA com um orçamento já visualizado apaga tudo em cascata
+  -- U15: excluir a CONTA com um orçamento enviado apaga tudo em cascata
   reset role;
   delete from auth.users where id = a;
   select count(*) into n from public.quotes where user_id = a;

@@ -1,7 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { getDataContext } from "@/lib/data/shared"
-import { getQuote, getQuoteDocument, insertQuote, toCreateQuoteParams, updateQuote } from "./quotes"
+import {
+  cancelQuote,
+  deleteQuote,
+  getQuote,
+  getQuoteDocument,
+  insertQuote,
+  sendQuote,
+  toCreateQuoteParams,
+  updateQuote,
+} from "./quotes"
 
 // "server-only" lança erro fora do servidor do Next; aqui ele vira um módulo vazio.
 vi.mock("server-only", () => ({}))
@@ -244,5 +253,82 @@ describe("getQuoteDocument", () => {
     mockRow({ id: "x", items: [], client: null, issuer: { full_name: "", email: "ana@exemplo.com", phone: null } })
     const { issuer } = await getQuoteDocument("6f1c1d2e-0000-4000-8000-0000000000f4")
     expect(issuer.name).toBe("Ana (do cadastro)")
+  })
+})
+
+describe("enviar e cancelar (máquina de estados)", () => {
+  const ID = "6f1c1d2e-0000-4000-8000-0000000000f5"
+  let rpc
+
+  function mockRpc(error) {
+    rpc = vi.fn(async () => ({ data: null, error }))
+    getDataContext.mockResolvedValue({ user: { id: "u1" }, supabase: { rpc } })
+  }
+
+  afterEach(() => vi.restoreAllMocks())
+
+  it("chamam as funções do banco com o id", async () => {
+    mockRpc(null)
+    await sendQuote(ID)
+    expect(rpc).toHaveBeenCalledWith("send_quote", { p_quote_id: ID })
+    await cancelQuote(ID)
+    expect(rpc).toHaveBeenCalledWith("cancel_quote", { p_quote_id: ID })
+  })
+
+  it.each([
+    [sendQuote, { code: "55000" }, "invalid_state", "Este orçamento já foi enviado."],
+    [sendQuote, { code: "22023" }, "validity_passed", "A validade deste orçamento já passou. Edite a data antes de enviar."],
+    [sendQuote, { code: "P0002" }, "not_found", "Orçamento não encontrado."],
+    [cancelQuote, { code: "55000" }, "invalid_state", "Este orçamento não pode mais ser cancelado."],
+    [cancelQuote, { code: "28000" }, "unauthenticated", "Sua sessão expirou. Entre novamente."],
+  ])("%o + %o → %s", async (fn, error, code, message) => {
+    mockRpc(error)
+    await expect(fn(ID)).rejects.toMatchObject({ name: "DataError", code, message })
+  })
+
+  it("erro inesperado → mensagem genérica + log", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {})
+    mockRpc({ code: "XX000", message: "falha interna" })
+    await expect(sendQuote(ID)).rejects.toMatchObject({ code: "transition_failed", message: "Não foi possível enviar o orçamento." })
+    expect(log).toHaveBeenCalledOnce()
+  })
+
+  it("id inválido → não encontrado, sem ir ao banco", async () => {
+    mockRpc(null)
+    await expect(sendQuote("abc")).rejects.toMatchObject({ code: "not_found" })
+    expect(rpc).not.toHaveBeenCalled()
+  })
+})
+
+describe("deleteQuote", () => {
+  const ID = "6f1c1d2e-0000-4000-8000-0000000000f6"
+
+  function mockDelete(result) {
+    const calls = []
+    const builder = {
+      delete: () => builder,
+      eq: (column, value) => {
+        calls.push([column, value])
+        return builder
+      },
+      select: () => builder,
+      maybeSingle: vi.fn(async () => result),
+    }
+    getDataContext.mockResolvedValue({ user: { id: "u1" }, supabase: { from: () => builder } })
+    return calls
+  }
+
+  it("só exclui rascunho do próprio usuário", async () => {
+    const calls = mockDelete({ data: { id: ID }, error: null })
+    await deleteQuote(ID)
+    expect(calls).toEqual([["id", ID], ["user_id", "u1"], ["status", "draft"]])
+  })
+
+  it("nada excluído (não é rascunho) → mensagem explicando o cancelamento", async () => {
+    mockDelete({ data: null, error: null })
+    await expect(deleteQuote(ID)).rejects.toMatchObject({
+      code: "not_deletable",
+      message: "Só rascunhos podem ser excluídos. Para tirar uma proposta enviada do ar, cancele-a.",
+    })
   })
 })

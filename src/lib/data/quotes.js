@@ -181,3 +181,81 @@ export async function listQuotes() {
   if (error) throw databaseError("quotes", "query_failed", "Não foi possível carregar os orçamentos.", error)
   return data
 }
+
+// ── Status (Sprint 12) ───────────────────────────────────────────────
+
+/**
+ * Erro de uma mudança de status → mensagem amigável. `invalidState`: a
+ * mensagem do 55000 (o status atual não permite a ação), que muda por ação.
+ */
+function transitionError(error, { invalidState, fallback }) {
+  if (error.code === "P0002") return new DataError("not_found", "Orçamento não encontrado.")
+  if (error.code === "55000") return new DataError("invalid_state", invalidState)
+  if (error.code === "28000") return new DataError("unauthenticated", "Sua sessão expirou. Entre novamente.")
+  return databaseError("quotes", "transition_failed", fallback, error)
+}
+
+/** Rascunho → enviado (função send_quote: confere o status e a validade). */
+export async function sendQuote(id) {
+  if (!isUuid(id)) throw new DataError("not_found", "Orçamento não encontrado.")
+  const { supabase } = await getDataContext()
+  const { error } = await supabase.rpc("send_quote", { p_quote_id: id })
+  if (!error) return
+  if (error.code === "22023") {
+    throw new DataError("validity_passed", "A validade deste orçamento já passou. Edite a data antes de enviar.")
+  }
+  throw transitionError(error, {
+    invalidState: "Este orçamento já foi enviado.",
+    fallback: "Não foi possível enviar o orçamento.",
+  })
+}
+
+/** Rascunho, enviado ou visualizado → cancelado (função cancel_quote). */
+export async function cancelQuote(id) {
+  if (!isUuid(id)) throw new DataError("not_found", "Orçamento não encontrado.")
+  const { supabase } = await getDataContext()
+  const { error } = await supabase.rpc("cancel_quote", { p_quote_id: id })
+  if (!error) return
+  throw transitionError(error, {
+    invalidState: "Este orçamento não pode mais ser cancelado.",
+    fallback: "Não foi possível cancelar o orçamento.",
+  })
+}
+
+/**
+ * Exclui um RASCUNHO (o RLS só deixa excluir rascunhos; o que foi enviado é
+ * histórico e sai do ar pelo cancelamento). Itens e eventos vão em cascata.
+ */
+export async function deleteQuote(id) {
+  if (!isUuid(id)) throw new DataError("not_found", "Orçamento não encontrado.")
+  const { user, supabase } = await getDataContext()
+  const { data, error } = await supabase
+    .from("quotes")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .eq("status", "draft")
+    .select("id")
+    .maybeSingle()
+  if (error) throw databaseError("quotes", "delete_failed", "Não foi possível excluir o orçamento.", error)
+  if (!data) {
+    throw new DataError(
+      "not_deletable",
+      "Só rascunhos podem ser excluídos. Para tirar uma proposta enviada do ar, cancele-a.",
+    )
+  }
+}
+
+/** Linha do tempo de um orçamento (gravada por gatilho no banco), da mais antiga à mais nova. */
+export async function listQuoteEvents(quoteId) {
+  if (!isUuid(quoteId)) return []
+  const { user, supabase } = await getDataContext()
+  const { data, error } = await supabase
+    .from("quote_events")
+    .select("id, type, metadata, created_at")
+    .eq("quote_id", quoteId)
+    .eq("user_id", user.id)
+    .order("created_at")
+  if (error) throw databaseError("quotes", "query_failed", "Não foi possível carregar o histórico do orçamento.", error)
+  return data
+}

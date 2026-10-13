@@ -30,7 +30,7 @@ export const QUOTE_STATUS_DESCRIPTIONS = Object.freeze({
   approved: "O cliente aprovou a proposta.",
   declined: "O cliente recusou a proposta.",
   expired: "Passou da data de validade sem resposta.",
-  cancelled: "Cancelado antes do envio.",
+  cancelled: "Cancelado. O cliente não pode mais aprovar.",
 })
 
 export function isQuoteStatus(value) {

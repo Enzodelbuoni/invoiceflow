@@ -1,0 +1,160 @@
+"use client"
+
+import { useState } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { BanIcon, EllipsisIcon, LinkIcon, PencilLineIcon, SendIcon, Trash2Icon, TriangleAlertIcon } from "lucide-react"
+import { toast } from "sonner"
+
+import { cancelQuoteAction, deleteQuoteAction, sendQuoteAction } from "@/actions/quotes"
+import { ComingSoonButton } from "@/components/shared/coming-soon-button"
+import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog"
+import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { formatIsoDateShort } from "@/lib/dates"
+import { formatCurrency } from "@/lib/money"
+
+/** Resumo do que vai ser enviado, dentro da confirmação. */
+function SendSummary({ quote, clientName, validityPassed }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 rounded-lg border bg-muted/40 p-3.5 text-sm">
+        <dt className="text-muted-foreground">Cliente</dt>
+        <dd className="truncate font-medium">{clientName ?? "—"}</dd>
+        <dt className="text-muted-foreground">Total</dt>
+        <dd className="font-medium tabular-nums">{formatCurrency(quote.total_cents)}</dd>
+        <dt className="text-muted-foreground">Válida até</dt>
+        <dd className={validityPassed ? "font-medium text-destructive" : undefined}>
+          {formatIsoDateShort(quote.valid_until)}
+        </dd>
+      </dl>
+      {validityPassed && (
+        <p className="flex items-start gap-2 text-sm text-destructive">
+          <TriangleAlertIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+          <span>
+            A validade já passou.{" "}
+            <Link href={`/quotes/${quote.id}/edit`} className="font-medium underline underline-offset-2">
+              Edite a data
+            </Link>{" "}
+            antes de enviar.
+          </span>
+        </p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Ações da página do orçamento, conforme o status (máquina de estados do
+ * Sprint 12): rascunho → editar, enviar, excluir; enviado/visualizado →
+ * copiar link (Sprint 14) e cancelar. Cada mudança passa por uma confirmação e
+ * por uma função do banco que confere o status de novo.
+ * @param {{ quote: { id: string, quote_number: string, status: string, total_cents: number, valid_until: string },
+ *   clientName: string|null, today: string }} props
+ */
+export function QuoteActions({ quote, clientName, today }) {
+  const router = useRouter()
+  const [dialog, setDialog] = useState(null) // "send" | "cancel" | "delete" | null
+  const isDraft = quote.status === "draft"
+  const isOpen = quote.status === "sent" || quote.status === "viewed"
+  const validityPassed = quote.valid_until < today
+  const close = (open) => !open && setDialog(null)
+
+  if (!isDraft && !isOpen) return null
+
+  return (
+    <>
+      {isDraft && (
+        <>
+          <Button asChild variant="outline" className="h-10">
+            <Link href={`/quotes/${quote.id}/edit`}>
+              <PencilLineIcon data-icon="inline-start" />
+              Editar
+            </Link>
+          </Button>
+          <Button className="h-10 shadow-sm" onClick={() => setDialog("send")}>
+            <SendIcon data-icon="inline-start" />
+            Enviar ao cliente
+          </Button>
+        </>
+      )}
+      {isOpen && (
+        <ComingSoonButton variant="outline" className="h-10" message="O link para o cliente ver e aprovar chega em breve.">
+          <LinkIcon data-icon="inline-start" />
+          Copiar link
+        </ComingSoonButton>
+      )}
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="icon" className="size-10">
+            <EllipsisIcon />
+            <span className="sr-only">Mais ações do orçamento {quote.quote_number}</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-48">
+          {isDraft ? (
+            <DropdownMenuItem variant="destructive" onSelect={() => setDialog("delete")}>
+              <Trash2Icon />
+              Excluir rascunho
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem variant="destructive" onSelect={() => setDialog("cancel")}>
+              <BanIcon />
+              Cancelar proposta
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <ConfirmActionDialog
+        open={dialog === "send"}
+        onOpenChange={close}
+        title={`Enviar o orçamento ${quote.quote_number}?`}
+        description="Depois de enviado, o documento fica travado: itens, preços, cliente e condições não mudam mais. Para corrigir algo, será preciso cancelar e criar outro."
+        confirmLabel="Enviar orçamento"
+        pendingLabel="Enviando…"
+        icon={<SendIcon data-icon="inline-start" />}
+        action={() => sendQuoteAction(quote.id)}
+        onDone={() =>
+          toast.success("Orçamento enviado", { description: `Orçamento ${quote.quote_number} travado e pronto para o cliente.` })
+        }
+      >
+        <SendSummary quote={quote} clientName={clientName} validityPassed={validityPassed} />
+      </ConfirmActionDialog>
+
+      <ConfirmActionDialog
+        open={dialog === "cancel"}
+        onOpenChange={close}
+        title={`Cancelar a proposta ${quote.quote_number}?`}
+        description="O cliente não poderá mais aprovar. O orçamento continua no seu histórico, marcado como cancelado."
+        confirmLabel="Cancelar proposta"
+        cancelLabel="Voltar"
+        pendingLabel="Cancelando…"
+        icon={<BanIcon data-icon="inline-start" />}
+        variant="destructive"
+        action={() => cancelQuoteAction(quote.id)}
+        onDone={() => toast.success("Proposta cancelada", { description: `Orçamento ${quote.quote_number}` })}
+      />
+
+      <ConfirmDeleteDialog
+        open={dialog === "delete"}
+        onOpenChange={close}
+        title={`Excluir o rascunho ${quote.quote_number}?`}
+        description="O rascunho e o histórico dele são apagados. Isso não pode ser desfeito."
+        confirmLabel="Excluir rascunho"
+        action={() => deleteQuoteAction(quote.id)}
+        onDeleted={() => {
+          toast.success("Rascunho excluído", { description: `Orçamento ${quote.quote_number}` })
+          router.push("/quotes")
+        }}
+      />
+    </>
+  )
+}
