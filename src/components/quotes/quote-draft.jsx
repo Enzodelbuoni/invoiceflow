@@ -10,15 +10,17 @@ import { useQuoteDraftStore } from "@/store/quote-draft-store"
 const plural = (count) => `${count} ${count === 1 ? "item" : "itens"}`
 
 /**
- * Aviso no topo do construtor quando há um orçamento não salvo guardado neste
- * navegador (a aba fechou, a página recarregou, a pessoa saiu da página…).
- * Mostra o que dá para reconhecer (título, cliente, itens, quando) e deixa a
- * pessoa escolher entre recuperar e descartar.
- * @param {{ draft: { values: object, savedAt: string }, clients: Array<{ id: string, name: string }>,
- *   onRestore: () => void, onDiscard: () => void }} props
+ * Aviso no topo do construtor quando há um orçamento (ou, na edição, alterações)
+ * não salvo guardado neste navegador (a aba fechou, a página recarregou, a
+ * pessoa saiu da página…). Mostra o que dá para reconhecer (título, cliente,
+ * itens, quando) e deixa a pessoa escolher entre recuperar e descartar.
+ * `draft.outdated`: na edição, o orçamento foi salvo de novo depois que estas
+ * alterações começaram (recuperar substitui o que foi salvo).
+ * @param {{ draft: { values: object, savedAt: string, outdated?: boolean }, editing?: boolean,
+ *   clients: Array<{ id: string, name: string }>, onRestore: () => void, onDiscard: () => void }} props
  */
-export function QuoteDraftBanner({ draft, clients, onRestore, onDiscard }) {
-  const { values, savedAt } = draft
+export function QuoteDraftBanner({ draft, editing = false, clients, onRestore, onDiscard }) {
+  const { values, savedAt, outdated } = draft
   const title = values?.title?.trim()
   const client = clients.find((option) => option.id === values?.client_id)
   const itemCount = Array.isArray(values?.items) ? values.items.length : 0
@@ -46,7 +48,7 @@ export function QuoteDraftBanner({ draft, clients, onRestore, onDiscard }) {
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <h2 id="quote-draft-title" className="font-medium">
-            Você tem um orçamento não salvo
+            {editing ? "Você tem alterações não salvas neste orçamento" : "Você tem um orçamento não salvo"}
           </h2>
           <p className="text-sm text-pretty text-muted-foreground">
             <span className="font-medium text-foreground">{title ? `“${title}”` : "Orçamento sem título"}</span>
@@ -54,6 +56,11 @@ export function QuoteDraftBanner({ draft, clients, onRestore, onDiscard }) {
               <span key={detail}> · {detail}</span>
             ))}
           </p>
+          {outdated && (
+            <p className="text-sm text-pretty text-warning">
+              O orçamento foi salvo de novo depois disso. Recuperar substitui a versão salva por estas alterações.
+            </p>
+          )}
         </div>
         <div className="flex shrink-0 gap-2">
           <Button type="button" className="h-9 shadow-sm" onClick={onRestore}>
@@ -75,8 +82,8 @@ export function QuoteDraftBanner({ draft, clients, onRestore, onDiscard }) {
  * conta (isso é o "Salvar rascunho"). Assina só o horário do rascunho, para os
  * salvamentos automáticos não re-renderizarem o formulário.
  */
-export function QuoteDraftStatus({ userId, active }) {
-  const savedAt = useQuoteDraftStore((state) => state.drafts[userId]?.savedAt)
+export function QuoteDraftStatus({ draftKey, active }) {
+  const savedAt = useQuoteDraftStore((state) => state.drafts[draftKey]?.savedAt)
   if (!active || !savedAt) return null
   return (
     <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">

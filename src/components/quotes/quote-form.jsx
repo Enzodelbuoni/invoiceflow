@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { AnimatePresence } from "motion/react"
 import { toast } from "sonner"
 
-import { createQuoteAction } from "@/actions/quotes"
+import { createQuoteAction, updateQuoteAction } from "@/actions/quotes"
 import { ClientSelector } from "@/components/quotes/client-selector"
 import { QuoteAdjustments } from "@/components/quotes/quote-adjustments"
 import { QuoteBasicInfo } from "@/components/quotes/quote-basic-info"
@@ -18,7 +18,8 @@ import { QuoteSection } from "@/components/quotes/quote-section"
 import { QuoteSummary } from "@/components/quotes/quote-summary"
 import { useQuoteDraft } from "@/hooks/use-quote-draft"
 import { countErrors, firstErrorPath } from "@/lib/form-errors"
-import { createEmptyQuoteForm, createQuoteSchema } from "@/lib/validations/quote"
+import { quoteDraftKey } from "@/lib/quote-draft"
+import { createEmptyQuoteForm, createQuoteSchema, toQuoteFormValues } from "@/lib/validations/quote"
 
 const byName = (a, b) => a.name.localeCompare(b.name, "pt-BR")
 
@@ -68,23 +69,33 @@ function useOptionsWithCreated(options) {
 /**
  * Construtor de orçamentos: seções numeradas à esquerda e o resumo financeiro
  * fixo à direita (no celular, o resumo vem depois das seções).
- * Validação com o schema Zod do orçamento (Sprint 7); "Salvar rascunho" grava
- * na conta pela Server Action (Sprint 10), que revalida tudo e calcula os
- * totais no servidor. Uma cópia do que está sendo digitado fica neste
- * navegador (useQuoteDraft), para recuperar o orçamento se a aba fechar ou o
- * salvamento falhar; ela é apagada quando o orçamento é salvo.
+ * Validação com o schema Zod do orçamento (Sprint 7); salvar grava na conta
+ * pela Server Action (Sprint 10), que revalida tudo e calcula os totais no
+ * servidor. Uma cópia do que está sendo digitado fica neste navegador
+ * (useQuoteDraft), para recuperar o trabalho se a aba fechar ou o salvamento
+ * falhar; ela é apagada quando o orçamento é salvo.
+ * Com `quote`, edita um rascunho já salvo (mesma tela, valores do banco, uma
+ * cópia local própria deste orçamento).
  * @param {{ today: string, userId: string,
  *   clients: Array<{ id: string, name: string, company: string|null, email: string|null }>,
- *   services: Array<{ id: string, name: string, description: string|null, unit: string, price_cents: number }> }} props
+ *   services: Array<{ id: string, name: string, description: string|null, unit: string, price_cents: number }>,
+ *   quote?: { id: string, quote_number: string, updated_at: string } }} props
  *   `today` ("AAAA-MM-DD") calculado no servidor; `userId` separa os rascunhos locais por conta;
- *   `clients` para o seletor; `services` para o catálogo.
+ *   `clients` para o seletor; `services` para o catálogo; `quote` (getQuote) na edição.
  */
-export function QuoteForm({ today, userId, clients, services }) {
+export function QuoteForm({ today, userId, clients, services, quote }) {
+  const editing = Boolean(quote)
   const schema = useMemo(() => createQuoteSchema({ today }), [today])
+  // Versão de partida: o orçamento em branco ou a versão salva. Memorizada,
+  // porque o rascunho local compara cada alteração com ela.
+  const baseValues = useMemo(
+    () => (quote ? toQuoteFormValues(quote) : createEmptyQuoteForm({ today })),
+    [quote, today],
+  )
   const form = useForm({
     resolver: zodResolver(schema),
     mode: "onTouched",
-    defaultValues: createEmptyQuoteForm({ today }),
+    defaultValues: baseValues,
     // O foco no primeiro erro é feito em onInvalid, na ordem da tela (o RHF
     // seguiria a ordem de registro dos campos e não sabe focar a lista de itens).
     shouldFocusError: false,
@@ -111,18 +122,34 @@ export function QuoteForm({ today, userId, clients, services }) {
   const [navigating, startNavigation] = useTransition()
   const [clientOptions, addCreatedClient] = useOptionsWithCreated(clients)
   const [serviceOptions, addCreatedService] = useOptionsWithCreated(services)
-  const draft = useQuoteDraft({ form, userId, today, clients: clientOptions, services: serviceOptions })
+  const draftKey = quoteDraftKey(userId, quote?.id)
+  const draft = useQuoteDraft({
+    form,
+    draftKey,
+    baseValues,
+    baseVersion: quote?.updated_at,
+    today,
+    clients: clientOptions,
+    services: serviceOptions,
+  })
+
+  const keptLocally = editing
+    ? "As alterações continuam guardadas neste navegador."
+    : "O orçamento continua guardado neste navegador."
 
   async function onValid() {
     // A action revalida com o mesmo schema e calcula os totais no servidor;
     // mandamos os valores crus do formulário.
     let result
     try {
-      result = await createQuoteAction(form.getValues())
+      const values = form.getValues()
+      result = editing
+        ? await updateQuoteAction(quote.id, quote.updated_at, values)
+        : await createQuoteAction(values)
     } catch {
       // Sem resposta do servidor (rede caiu, servidor fora do ar).
       toast.error("Não foi possível falar com o servidor", {
-        description: "Confira sua conexão e tente de novo. O orçamento continua guardado neste navegador.",
+        description: `Confira sua conexão e tente de novo. ${keptLocally}`,
       })
       return
     }
@@ -131,7 +158,7 @@ export function QuoteForm({ today, userId, clients, services }) {
       const fieldErrors = Object.entries(result.fieldErrors ?? {})
       for (const [name, message] of fieldErrors) form.setError(name, { type: "server", message })
       toast.error(result.message, {
-        description: fieldErrors.length ? undefined : "O orçamento continua guardado neste navegador.",
+        description: fieldErrors.length ? undefined : keptLocally,
       })
       const path = firstErrorPath(form.formState.errors, FIELD_ORDER)
       if (path) document.getElementById(path)?.focus()
@@ -140,7 +167,7 @@ export function QuoteForm({ today, userId, clients, services }) {
 
     // Antes de sair: a desmontagem do construtor gravaria a cópia local de novo.
     draft.forget()
-    toast.success("Rascunho salvo", { description: `Orçamento ${result.quoteNumber}` })
+    toast.success(editing ? "Alterações salvas" : "Rascunho salvo", { description: `Orçamento ${result.quoteNumber}` })
     startNavigation(() => router.push("/quotes"))
   }
 
@@ -162,6 +189,7 @@ export function QuoteForm({ today, userId, clients, services }) {
           <QuoteDraftBanner
             key="quote-draft"
             draft={draft.pendingDraft}
+            editing={editing}
             clients={clientOptions}
             onRestore={draft.restore}
             onDiscard={draft.discard}
@@ -217,7 +245,8 @@ export function QuoteForm({ today, userId, clients, services }) {
           today={today}
           clients={clientOptions}
           saving={form.formState.isSubmitting || navigating}
-          footer={<QuoteDraftStatus userId={userId} active={draft.autosaving} />}
+          saveLabel={editing ? "Salvar alterações" : "Salvar rascunho"}
+          footer={<QuoteDraftStatus draftKey={draftKey} active={draft.autosaving} />}
         />
       </form>
     </div>

@@ -10,19 +10,23 @@ import { useQuoteDraftStore } from "@/store/quote-draft-store"
 const AUTOSAVE_DELAY_MS = 400
 
 /**
- * Rascunho local do construtor (Sprint 9):
- * 1. ao montar, lê o localStorage; havendo um orçamento não salvo (de até 30
+ * Rascunho local do construtor (Sprint 9; edição no Sprint 10):
+ * 1. ao montar, lê o localStorage; havendo alterações não salvas (de até 30
  *    dias), devolve `pendingDraft` para o aviso "Recuperar / Descartar";
  * 2. decidido (ou sem rascunho), grava automaticamente uma cópia do formulário
  *    a cada alteração (com espera curta, e na hora ao sair da página);
  *    enquanto a pessoa não decide, NÃO grava, para não apagar o rascunho antigo.
  *
- * @param {{ form: object, userId: string, today: string,
+ * @param {{ form: object, draftKey: string, baseValues: object, baseVersion?: string, today: string,
  *   clients: Array<{ id: string }>, services: Array<{ id: string }> }} options
- * @returns {{ pendingDraft: { values: object, savedAt: string } | null,
+ *   `draftKey`: de `quoteDraftKey` (por usuário; na edição, também por orçamento).
+ *   `baseValues`: a versão de partida (orçamento em branco ou a versão salva);
+ *   igual a ela, não há o que guardar. `baseVersion`: na edição, o updated_at
+ *   da versão salva; uma cópia feita sobre outra versão volta com `outdated`.
+ * @returns {{ pendingDraft: { values: object, savedAt: string, outdated: boolean } | null,
  *   restore: () => void, discard: () => void, forget: () => void, autosaving: boolean }}
  */
-export function useQuoteDraft({ form, userId, today, clients, services }) {
+export function useQuoteDraft({ form, draftKey, baseValues, baseVersion, today, clients, services }) {
   // "checking": lendo o localStorage · "pending": há rascunho e a pessoa ainda
   // não escolheu · "ready": gravando automaticamente.
   const [status, setStatus] = useState("checking")
@@ -34,18 +38,18 @@ export function useQuoteDraft({ form, userId, today, clients, services }) {
   // localStorage, e o 1º render do navegador precisa bater com o HTML dele.
   useEffect(() => {
     const unsubscribe = useQuoteDraftStore.persist.onFinishHydration((state) => {
-      const draft = state.drafts[userId]
+      const draft = state.drafts[draftKey]
       if (draft && !isDraftExpired(draft.savedAt)) {
-        setPendingDraft(draft)
+        setPendingDraft({ ...draft, outdated: Boolean(baseVersion) && draft.baseVersion !== baseVersion })
         setStatus("pending")
         return
       }
-      if (draft) state.removeDraft(userId)
+      if (draft) state.removeDraft(draftKey)
       setStatus("ready")
     })
     useQuoteDraftStore.persist.rehydrate()
     return unsubscribe
-  }, [userId])
+  }, [draftKey, baseVersion])
 
   useEffect(() => {
     if (status !== "ready") return
@@ -60,8 +64,8 @@ export function useQuoteDraft({ form, userId, today, clients, services }) {
       latest = null
       const store = useQuoteDraftStore.getState()
       // Cópia: o RHF continua mexendo no objeto de valores depois daqui.
-      if (hasDraftContent(values, { today })) store.saveDraft(userId, structuredClone(values))
-      else store.removeDraft(userId)
+      if (hasDraftContent(values, baseValues)) store.saveDraft(draftKey, structuredClone(values), baseVersion)
+      else store.removeDraft(draftKey)
     }
     function flushWhenHidden() {
       if (document.visibilityState === "hidden") flush()
@@ -84,7 +88,7 @@ export function useQuoteDraft({ form, userId, today, clients, services }) {
       document.removeEventListener("visibilitychange", flushWhenHidden)
       flush() // saindo da página pelo menu: grava o que faltava
     }
-  }, [form, status, today, userId])
+  }, [form, status, draftKey, baseValues, baseVersion])
 
   // Depois de decidir, os botões do aviso somem: o foco vai para o 1º campo.
   const focusFirstField = useRef(false)
@@ -100,18 +104,20 @@ export function useQuoteDraft({ form, userId, today, clients, services }) {
       clientIds: new Set(clients.map((client) => client.id)),
       serviceIds: new Set(services.map((service) => service.id)),
     })
-    // keepDefaultValues: o "vazio" continua sendo o orçamento em branco.
+    // keepDefaultValues: o "intocado" continua sendo a versão de partida.
     form.reset(values, { keepDefaultValues: true })
     // Validade que ficou no passado enquanto o rascunho esperava: avisa já.
     if (values.valid_until < today) form.trigger("valid_until")
-    toast.success("Orçamento recuperado", { description: "Continue de onde parou." })
+    toast.success(baseVersion ? "Alterações recuperadas" : "Orçamento recuperado", {
+      description: "Continue de onde parou.",
+    })
     focusFirstField.current = true
     setPendingDraft(null)
     setStatus("ready")
   }
 
   function discard() {
-    useQuoteDraftStore.getState().removeDraft(userId)
+    useQuoteDraftStore.getState().removeDraft(draftKey)
     focusFirstField.current = true
     setPendingDraft(null)
     setStatus("ready")
@@ -123,7 +129,7 @@ export function useQuoteDraft({ form, userId, today, clients, services }) {
    */
   function forget() {
     forgottenRef.current = true
-    useQuoteDraftStore.getState().removeDraft(userId)
+    useQuoteDraftStore.getState().removeDraft(draftKey)
   }
 
   return { pendingDraft, restore, discard, forget, autosaving: status === "ready" }

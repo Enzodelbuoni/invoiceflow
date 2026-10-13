@@ -5,6 +5,7 @@ import { DISCOUNT_TYPE, DISCOUNT_TYPE_VALUES } from "@/lib/constants/discount-ty
 import { SERVICE_UNIT, SERVICE_UNIT_VALUES } from "@/lib/constants/service-units"
 import { addDaysIso, formatIsoDateShort, isIsoDate } from "@/lib/dates"
 import { MAX_PRICE_CENTS, formatCurrency, formatCurrencyInput } from "@/lib/money"
+import { formatPercentInput } from "@/lib/percent"
 import { DEFAULT_QUANTITY_INPUT, MAX_QUANTITY_HUNDREDTHS, formatQuantity } from "@/lib/quantity"
 import { isUuid } from "@/lib/uuid"
 import { basisPointsFromText, centsFromText, hundredthsFromText } from "@/lib/validations/numbers"
@@ -91,6 +92,47 @@ export function createQuoteItem(service) {
     quantity: DEFAULT_QUANTITY_INPUT,
     unit: service.unit,
     unit_price: formatCurrencyInput(service.price_cents),
+  }
+}
+
+/** Valor do desconto do banco → texto do campo, conforme o tipo. */
+function discountValueToInput(type, value) {
+  if (value === null || value === undefined) return ""
+  if (type === DISCOUNT_TYPE.PERCENT) return formatPercentInput(value)
+  if (type === DISCOUNT_TYPE.AMOUNT) return formatCurrencyInput(value)
+  return ""
+}
+
+/**
+ * Orçamento do banco (com `items` em ordem) → valores do formulário: o inverso
+ * do createQuoteSchema. Passar o resultado pelo schema devolve os mesmos dados.
+ * @param {{ client_id: string, title: string, description: string|null, valid_until: string,
+ *   discount_type: "percent"|"amount"|null, discount_value: number|null, tax_rate_bps: number|null,
+ *   notes: string|null, terms: string|null,
+ *   items: Array<{ service_id: string|null, name: string, description: string|null,
+ *     quantity_hundredths: number, unit: string, unit_price_cents: number }> }} quote
+ */
+export function toQuoteFormValues(quote) {
+  const discountType = quote.discount_type ?? DISCOUNT_TYPE.NONE
+  return {
+    client_id: quote.client_id,
+    title: quote.title,
+    description: quote.description ?? "",
+    valid_until: quote.valid_until,
+    items: quote.items.map((item) => ({
+      service_id: item.service_id ?? "",
+      name: item.name,
+      description: item.description ?? "",
+      quantity: formatQuantity(item.quantity_hundredths),
+      unit: item.unit,
+      unit_price: formatCurrencyInput(item.unit_price_cents),
+    })),
+    discount_type: discountType,
+    discount_value: discountValueToInput(discountType, quote.discount_value),
+    tax_enabled: quote.tax_rate_bps !== null && quote.tax_rate_bps !== undefined,
+    tax_rate: quote.tax_rate_bps ? formatPercentInput(quote.tax_rate_bps) : "",
+    notes: quote.notes ?? "",
+    terms: quote.terms ?? "",
   }
 }
 

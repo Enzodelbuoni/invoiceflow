@@ -36,8 +36,11 @@ const safeLocalStorage = {
 }
 
 /**
- * `drafts`: { [userId]: { values, savedAt } }. Por usuário, para uma pessoa
- * que entrar com outra conta no mesmo navegador não ver o rascunho da outra.
+ * `drafts`: { [chave]: { values, savedAt, baseVersion? } }. A chave vem de
+ * `quoteDraftKey` (lib/quote-draft.js): por usuário (uma pessoa que entrar com
+ * outra conta no mesmo navegador não vê o rascunho da outra) e, na edição,
+ * também por orçamento. `baseVersion`: na edição, o updated_at da versão salva
+ * de onde as alterações partiram.
  * `skipHydration`: o servidor não tem localStorage; quem usa chama
  * `useQuoteDraftStore.persist.rehydrate()` depois de montar (senão o HTML do
  * servidor e o primeiro render do navegador divergiriam).
@@ -46,13 +49,18 @@ export const useQuoteDraftStore = create(
   persist(
     (set) => ({
       drafts: {},
-      saveDraft: (userId, values) =>
-        set((state) => ({ drafts: { ...state.drafts, [userId]: { values, savedAt: new Date().toISOString() } } })),
-      removeDraft: (userId) =>
+      saveDraft: (key, values, baseVersion) =>
+        set((state) => ({
+          drafts: {
+            ...state.drafts,
+            [key]: { values, savedAt: new Date().toISOString(), ...(baseVersion ? { baseVersion } : {}) },
+          },
+        })),
+      removeDraft: (key) =>
         set((state) => {
-          if (!(userId in state.drafts)) return state
+          if (!(key in state.drafts)) return state
           const drafts = { ...state.drafts }
-          delete drafts[userId]
+          delete drafts[key]
           return { drafts }
         }),
     }),

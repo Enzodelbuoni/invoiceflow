@@ -30,11 +30,20 @@ function deepEqual(a, b) {
 }
 
 /**
- * Há algo digitado? (valores diferentes do orçamento vazio). Um formulário
- * intocado não vira rascunho; e apagar tudo de volta remove o rascunho.
+ * Chave do rascunho local: por usuário no "Novo orçamento" e por usuário +
+ * orçamento na edição (cada orçamento editado tem a própria cópia).
  */
-export function hasDraftContent(values, { today }) {
-  return !deepEqual(values, createEmptyQuoteForm({ today }))
+export function quoteDraftKey(userId, quoteId) {
+  return quoteId ? `${userId}:${quoteId}` : userId
+}
+
+/**
+ * Há algo diferente da versão de partida? `base`: o orçamento em branco (novo)
+ * ou a versão salva no banco (edição). Um formulário intocado não vira
+ * rascunho; e desfazer tudo de volta remove o rascunho.
+ */
+export function hasDraftContent(values, base) {
+  return !deepEqual(values, base)
 }
 
 const text = (value, fallback = "") => (typeof value === "string" ? value : fallback)

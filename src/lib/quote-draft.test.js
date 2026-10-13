@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest"
 
 import { QUOTE_LIMITS, createEmptyQuoteForm, createQuoteItem } from "@/lib/validations/quote"
 
-import { QUOTE_DRAFT_MAX_AGE_DAYS, hasDraftContent, isDraftExpired, sanitizeDraftValues } from "./quote-draft"
+import {
+  QUOTE_DRAFT_MAX_AGE_DAYS,
+  hasDraftContent,
+  isDraftExpired,
+  quoteDraftKey,
+  sanitizeDraftValues,
+} from "./quote-draft"
 
 const TODAY = "2026-10-12"
 const CLIENT = "6f1c1d2e-0000-4000-8000-000000000001"
@@ -26,7 +32,7 @@ describe("isDraftExpired", () => {
 
 describe("hasDraftContent", () => {
   it("formulário intocado não tem conteúdo", () => {
-    expect(hasDraftContent(createEmptyQuoteForm({ today: TODAY }), { today: TODAY })).toBe(false)
+    expect(hasDraftContent(createEmptyQuoteForm({ today: TODAY }), createEmptyQuoteForm({ today: TODAY }))).toBe(false)
   })
 
   it.each([
@@ -35,12 +41,25 @@ describe("hasDraftContent", () => {
     ["item", { items: [createQuoteItem()] }],
     ["imposto ligado", { tax_enabled: true }],
   ])("qualquer mudança conta (%s)", (_, change) => {
-    expect(hasDraftContent({ ...createEmptyQuoteForm({ today: TODAY }), ...change }, { today: TODAY })).toBe(true)
+    expect(hasDraftContent({ ...createEmptyQuoteForm({ today: TODAY }), ...change }, createEmptyQuoteForm({ today: TODAY }))).toBe(true)
+  })
+
+  it("na edição, compara com a versão salva (e não com o orçamento em branco)", () => {
+    const saved = { ...createEmptyQuoteForm({ today: TODAY }), title: "Site", items: [createQuoteItem()] }
+    expect(hasDraftContent(structuredClone(saved), saved)).toBe(false)
+    expect(hasDraftContent({ ...saved, title: "Site novo" }, saved)).toBe(true)
   })
 
   it("apagar o que foi digitado volta a não ter conteúdo", () => {
     const values = { ...createEmptyQuoteForm({ today: TODAY }), title: "" }
-    expect(hasDraftContent(values, { today: TODAY })).toBe(false)
+    expect(hasDraftContent(values, createEmptyQuoteForm({ today: TODAY }))).toBe(false)
+  })
+})
+
+describe("quoteDraftKey", () => {
+  it("novo orçamento: só o usuário; edição: usuário + orçamento", () => {
+    expect(quoteDraftKey("u1")).toBe("u1")
+    expect(quoteDraftKey("u1", "q1")).toBe("u1:q1")
   })
 })
 

@@ -10,6 +10,7 @@ import { QuoteSectionEmpty } from "@/components/quotes/quote-section"
 import { ServicePicker } from "@/components/quotes/service-picker"
 import { Button } from "@/components/ui/button"
 import { FieldError } from "@/components/ui/field"
+import { useMounted } from "@/hooks/use-mounted"
 import { listErrorMessage } from "@/lib/form-errors"
 import { QUOTE_LIMITS, createQuoteItem } from "@/lib/validations/quote"
 
@@ -29,6 +30,11 @@ function describeItem(values, position) {
  */
 export function QuoteItems({ form, services, onServiceCreated }) {
   const { fields, append, insert, move, remove } = useFieldArray({ control: form.control, name: "items" })
+  // Os ids do useFieldArray são aleatórios: o servidor e o navegador geram ids
+  // diferentes para os itens que já vêm preenchidos (edição). Até montar, os
+  // ids do DOM partem da posição; o foco depois de mover/remover só acontece
+  // depois de montado, já com os ids estáveis.
+  const mounted = useMounted()
   const [announcement, setAnnouncement] = useState("")
   const full = fields.length >= QUOTE_LIMITS.items
 
@@ -202,7 +208,7 @@ export function QuoteItems({ form, services, onServiceCreated }) {
                     form={form}
                     index={index}
                     count={fields.length}
-                    fieldId={field.id}
+                    fieldId={mounted ? field.id : `ssr-${index}`}
                     fromCatalog={Boolean(field.service_id)}
                     catalogPriceCents={field.service_id ? catalogPrice.get(field.service_id) : undefined}
                     onMove={moveItem}

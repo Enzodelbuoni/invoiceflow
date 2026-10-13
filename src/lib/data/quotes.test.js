@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { getDataContext } from "@/lib/data/shared"
-import { insertQuote, toCreateQuoteParams } from "./quotes"
+import { getQuote, insertQuote, toCreateQuoteParams, updateQuote } from "./quotes"
 
 // "server-only" lança erro fora do servidor do Next; aqui ele vira um módulo vazio.
 vi.mock("server-only", () => ({}))
@@ -135,5 +135,81 @@ describe("insertQuote", () => {
       message: "Não foi possível salvar o orçamento.",
     })
     expect(log).toHaveBeenCalledOnce()
+  })
+})
+
+describe("updateQuote", () => {
+  const ID = "6f1c1d2e-0000-4000-8000-0000000000f1"
+  const UPDATED_AT = "2026-10-13T16:41:39.123456+00:00"
+  let response
+  let rpc
+
+  beforeEach(() => {
+    response = { data: { id: ID, quote_number: "2026-001" }, error: null }
+    const single = vi.fn(async () => response)
+    rpc = vi.fn(() => ({ single }))
+    getDataContext.mockResolvedValue({ user: { id: "u1" }, supabase: { rpc } })
+  })
+
+  afterEach(() => vi.restoreAllMocks())
+
+  it("chama o update_quote com o id, o updated_at aberto e os totais calculados aqui", async () => {
+    await expect(updateQuote(ID, UPDATED_AT, quote())).resolves.toEqual({ id: ID, quote_number: "2026-001" })
+    expect(rpc).toHaveBeenCalledWith("update_quote", {
+      p_quote_id: ID,
+      p_expected_updated_at: UPDATED_AT,
+      ...toCreateQuoteParams(quote()),
+    })
+  })
+
+  it("id inválido → não encontrado, sem ir ao banco", async () => {
+    await expect(updateQuote("123", UPDATED_AT, quote())).rejects.toMatchObject({ code: "not_found" })
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ["orçamento de outra pessoa ou excluído", { code: "P0002", message: "Orçamento não encontrado." }, "not_found"],
+    ["orçamento já enviado", { code: "55000", message: "Só rascunhos podem ser editados." }, "not_editable"],
+    ["alterado em outra aba", { code: "PT409", message: "O orçamento foi alterado depois de aberto." }, "conflict"],
+  ])("%s → mensagem própria, sem log", async (_, error, code) => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {})
+    response = { data: null, error }
+    await expect(updateQuote(ID, UPDATED_AT, quote())).rejects.toMatchObject({ name: "DataError", code })
+    expect(log).not.toHaveBeenCalled()
+  })
+
+  it("erro inesperado → mensagem da edição + log", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {})
+    response = { data: null, error: { code: "23514", message: "O subtotal não confere com a soma dos itens." } }
+    await expect(updateQuote(ID, UPDATED_AT, quote())).rejects.toMatchObject({
+      code: "write_failed",
+      message: "Não foi possível salvar as alterações.",
+    })
+    expect(log).toHaveBeenCalledOnce()
+  })
+})
+
+describe("getQuote", () => {
+  it("devolve os itens na ordem de position (o join não garante a ordem)", async () => {
+    const row = {
+      id: "6f1c1d2e-0000-4000-8000-0000000000f2",
+      items: [
+        { position: 2, name: "C" },
+        { position: 0, name: "A" },
+        { position: 1, name: "B" },
+      ],
+    }
+    const maybeSingle = vi.fn(async () => ({ data: row, error: null }))
+    const builder = { select: () => builder, eq: () => builder, maybeSingle }
+    getDataContext.mockResolvedValue({ user: { id: "u1" }, supabase: { from: () => builder } })
+
+    const result = await getQuote(row.id)
+    expect(result.items.map((item) => item.name)).toEqual(["A", "B", "C"])
+  })
+
+  it("id inválido → null, sem ir ao banco", async () => {
+    getDataContext.mockClear()
+    await expect(getQuote("abc")).resolves.toBeNull()
+    expect(getDataContext).not.toHaveBeenCalled()
   })
 })

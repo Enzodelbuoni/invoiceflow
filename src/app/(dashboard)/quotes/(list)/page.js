@@ -71,6 +71,22 @@ function StatusLifecycle() {
   )
 }
 
+/**
+ * Título do orçamento. Rascunho: link para a edição que cobre a linha/cartão
+ * inteiro. Os demais ganham link quando existir a página interna (Sprint 11).
+ */
+function QuoteTitle({ quote }) {
+  if (quote.status !== "draft") return <span className="truncate font-medium">{quote.title}</span>
+  return (
+    <Link
+      href={`/quotes/${quote.id}/edit`}
+      className="truncate font-medium outline-none after:absolute after:inset-0 after:rounded-[inherit] hover:underline focus-visible:underline"
+    >
+      {quote.title}
+    </Link>
+  )
+}
+
 function QuoteNumber({ quote }) {
   return <span className="font-mono text-xs text-muted-foreground">Nº {quote.quote_number}</span>
 }
@@ -101,10 +117,10 @@ function QuotesTable({ quotes }) {
         </TableHeader>
         <TableBody>
           {quotes.map((quote) => (
-            <TableRow key={quote.id}>
+            <TableRow key={quote.id} className="relative">
               <TableCell className="max-w-80 py-3 pl-5">
                 <div className="flex min-w-0 flex-col gap-0.5">
-                  <span className="truncate font-medium">{quote.title}</span>
+                  <QuoteTitle quote={quote} />
                   <QuoteNumber quote={quote} />
                 </div>
               </TableCell>
@@ -129,10 +145,10 @@ function QuotesCards({ quotes }) {
   return (
     <ul className="flex flex-col gap-3 md:hidden">
       {quotes.map((quote) => (
-        <li key={quote.id} className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm">
+        <li key={quote.id} className="relative flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="truncate font-medium">{quote.title}</span>
+              <QuoteTitle quote={quote} />
               <QuoteNumber quote={quote} />
             </div>
             <StatusBadge status={quote.status} size="sm" className="shrink-0" />

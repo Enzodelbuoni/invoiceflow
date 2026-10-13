@@ -1,7 +1,8 @@
 import "server-only"
+import { cache } from "react"
 
 import { calculateQuoteTotals } from "@/lib/calculations/quote"
-import { DataError, databaseError, getDataContext } from "@/lib/data/shared"
+import { DataError, databaseError, getDataContext, isUuid } from "@/lib/data/shared"
 import { isSupabaseConfigured } from "@/lib/supabase/env"
 
 // Camada de acesso a dados dos orçamentos (peças comuns em ./shared.js).
@@ -11,6 +12,13 @@ import { isSupabaseConfigured } from "@/lib/supabase/env"
 
 const LIST_COLUMNS =
   "id, quote_number, title, status, total_cents, valid_until, created_at, client:clients(id, name, company)"
+
+const QUOTE_COLUMNS = [
+  "id, quote_number, status, client_id, title, description, valid_until",
+  "discount_type, discount_value, tax_rate_bps, subtotal_cents, discount_total_cents, tax_total_cents, total_cents",
+  "notes, terms, created_at, updated_at",
+  "items:quote_items(position, service_id, name, description, quantity_hundredths, unit, unit_price_cents, subtotal_cents)",
+].join(", ")
 
 /**
  * Orçamento validado (saída do createQuoteSchema) → argumentos da função
@@ -57,8 +65,20 @@ function quoteWriteError(error, fallback) {
       )
     }
   }
-  // 28000 = sessão inválida (levantado pela própria função create_quote).
+  // Códigos levantados pelas próprias funções create_quote/update_quote e pelas
+  // guardas de imutabilidade (migração update_quote).
   if (error.code === "28000") return new DataError("unauthenticated", "Sua sessão expirou. Entre novamente.")
+  if (error.code === "P0002") return new DataError("not_found", "Orçamento não encontrado.")
+  if (error.code === "55000") {
+    return new DataError("not_editable", "Este orçamento já foi enviado e não pode mais ser editado.")
+  }
+  // PT409 (e não 40001: o PostgREST repete transações que falham com 40001).
+  if (error.code === "PT409") {
+    return new DataError(
+      "conflict",
+      "Este orçamento foi alterado em outra aba ou aparelho depois que você o abriu. Recarregue a página para ver a versão atual.",
+    )
+  }
   return databaseError("quotes", "write_failed", fallback, error)
 }
 
@@ -75,6 +95,43 @@ export async function insertQuote(quote) {
   if (error) throw quoteWriteError(error, "Não foi possível salvar o orçamento.")
   return data
 }
+
+/**
+ * Salva a edição de um rascunho (função update_quote do banco): campos,
+ * totais e itens numa transação só. `expectedUpdatedAt` é o updated_at lido
+ * ao abrir a edição; se o orçamento mudou depois disso, o banco recusa.
+ * `quote` já validado pelo createQuoteSchema.
+ * @returns {Promise<{ id: string, quote_number: string }>}
+ */
+export async function updateQuote(id, expectedUpdatedAt, quote) {
+  if (!isUuid(id)) throw new DataError("not_found", "Orçamento não encontrado.")
+  const params = toCreateQuoteParams(quote)
+  const { supabase } = await getDataContext()
+  const { data, error } = await supabase
+    .rpc("update_quote", { p_quote_id: id, p_expected_updated_at: expectedUpdatedAt, ...params })
+    .single()
+  if (error) throw quoteWriteError(error, "Não foi possível salvar as alterações.")
+  return data
+}
+
+/**
+ * Um orçamento do usuário com os itens em ordem, para a edição; `null` se não
+ * existir (ou for de outra pessoa). `cache`: página e generateMetadata pedem o
+ * mesmo orçamento na mesma requisição.
+ */
+export const getQuote = cache(async (id) => {
+  if (!isUuid(id)) return null
+  const { user, supabase } = await getDataContext()
+  const { data, error } = await supabase
+    .from("quotes")
+    .select(QUOTE_COLUMNS)
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .maybeSingle()
+  if (error) throw databaseError("quotes", "query_failed", "Não foi possível carregar o orçamento.", error)
+  if (!data) return null
+  return { ...data, items: [...data.items].sort((a, b) => a.position - b.position) }
+})
 
 /** Orçamentos do usuário, mais recentes primeiro, com o nome do cliente. */
 export async function listQuotes() {

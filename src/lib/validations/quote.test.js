@@ -11,6 +11,7 @@ import {
   createEmptyQuoteForm,
   createQuoteItem,
   createQuoteSchema,
+  toQuoteFormValues,
 } from "./quote"
 import { serviceSchema } from "./service"
 
@@ -380,5 +381,68 @@ describe("createQuoteSchema", () => {
         tax_rate: "Informe a alíquota.",
       })
     })
+  })
+})
+
+describe("toQuoteFormValues (banco → formulário, para a edição)", () => {
+  const TODAY = "2026-10-13"
+  const schema = createQuoteSchema({ today: TODAY })
+  const CLIENT = "6f1c1d2e-0000-4000-8000-000000000001"
+  const SERVICE = "6f1c1d2e-0000-4000-8000-000000000002"
+
+  /** Orçamento como o banco devolve (getQuote), sem as colunas que o formulário não usa. */
+  const stored = (overrides = {}) => ({
+    client_id: CLIENT,
+    title: "Site institucional",
+    description: null,
+    valid_until: "2026-10-28",
+    discount_type: null,
+    discount_value: null,
+    tax_rate_bps: null,
+    notes: "Pagamento em 2x",
+    terms: null,
+    items: [
+      { service_id: SERVICE, name: "Landing page", description: "Uma página", quantity_hundredths: 50000025, unit: "project", unit_price_cents: 123456789 },
+      { service_id: null, name: "Suporte", description: null, quantity_hundredths: 150, unit: "hour", unit_price_cents: 15033 },
+    ],
+    ...overrides,
+  })
+
+  it("converte inteiros em textos dos campos e null em vazio", () => {
+    expect(toQuoteFormValues(stored({ items: [stored().items[1]] }))).toEqual({
+      client_id: CLIENT,
+      title: "Site institucional",
+      description: "",
+      valid_until: "2026-10-28",
+      items: [{ service_id: "", name: "Suporte", description: "", quantity: "1,5", unit: "hour", unit_price: "150,33" }],
+      discount_type: DISCOUNT_TYPE.NONE,
+      discount_value: "",
+      tax_enabled: false,
+      tax_rate: "",
+      notes: "Pagamento em 2x",
+      terms: "",
+    })
+  })
+
+  it.each([
+    ["sem desconto nem imposto", {}],
+    ["desconto percentual + imposto", { discount_type: "percent", discount_value: 1250, tax_rate_bps: 500 }],
+    ["desconto fixo", { discount_type: "amount", discount_value: 35000 }],
+    ["percentuais com casas", { discount_type: "percent", discount_value: 1, tax_rate_bps: 10000 }],
+  ])("ida e volta pelo schema devolve o mesmo orçamento (%s)", (_, overrides) => {
+    const items = [{ ...stored().items[0], quantity_hundredths: 250 }, stored().items[1]]
+    const quote = stored({ items, ...overrides })
+    const { items: storedItems, ...fields } = quote
+    expect(schema.parse(toQuoteFormValues(quote))).toEqual({
+      ...fields,
+      items: storedItems.map(({ service_id, name, description, quantity_hundredths, unit, unit_price_cents }) => ({
+        service_id, name, description, quantity_hundredths, unit, unit_price_cents,
+      })),
+    })
+  })
+
+  it("quantidades e preços grandes voltam com separador de milhar", () => {
+    const [item] = toQuoteFormValues(stored()).items
+    expect(item).toMatchObject({ quantity: "500.000,25", unit_price: "1.234.567,89" })
   })
 })
