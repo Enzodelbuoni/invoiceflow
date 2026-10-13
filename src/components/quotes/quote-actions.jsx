@@ -3,7 +3,16 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { BanIcon, EllipsisIcon, LinkIcon, PencilLineIcon, SendIcon, Trash2Icon, TriangleAlertIcon } from "lucide-react"
+import {
+  BanIcon,
+  CopyIcon,
+  EllipsisIcon,
+  LinkIcon,
+  PencilLineIcon,
+  SendIcon,
+  Trash2Icon,
+  TriangleAlertIcon,
+} from "lucide-react"
 import { toast } from "sonner"
 
 import { cancelQuoteAction, deleteQuoteAction, sendQuoteAction } from "@/actions/quotes"
@@ -15,8 +24,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useDuplicateQuote } from "@/hooks/use-duplicate-quote"
 import { formatIsoDateShort } from "@/lib/dates"
 import { formatCurrency } from "@/lib/money"
 
@@ -53,20 +64,20 @@ function SendSummary({ quote, clientName, validityPassed }) {
 /**
  * Ações da página do orçamento, conforme o status (máquina de estados do
  * Sprint 12): rascunho → editar, enviar, excluir; enviado/visualizado →
- * copiar link (Sprint 14) e cancelar. Cada mudança passa por uma confirmação e
- * por uma função do banco que confere o status de novo.
+ * copiar link (Sprint 14) e cancelar; qualquer status → duplicar como novo
+ * rascunho (Sprint 13). Cada mudança de status passa por uma confirmação e por
+ * uma função do banco que confere o status de novo.
  * @param {{ quote: { id: string, quote_number: string, status: string, total_cents: number, valid_until: string },
  *   clientName: string|null, today: string }} props
  */
 export function QuoteActions({ quote, clientName, today }) {
   const router = useRouter()
   const [dialog, setDialog] = useState(null) // "send" | "cancel" | "delete" | null
+  const { duplicate, pending: duplicating } = useDuplicateQuote()
   const isDraft = quote.status === "draft"
   const isOpen = quote.status === "sent" || quote.status === "viewed"
   const validityPassed = quote.valid_until < today
   const close = (open) => !open && setDialog(null)
-
-  if (!isDraft && !isOpen) return null
 
   return (
     <>
@@ -98,13 +109,19 @@ export function QuoteActions({ quote, clientName, today }) {
             <span className="sr-only">Mais ações do orçamento {quote.quote_number}</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-48">
-          {isDraft ? (
+        <DropdownMenuContent align="end" className="min-w-52">
+          <DropdownMenuItem disabled={duplicating} onSelect={() => duplicate(quote)}>
+            <CopyIcon />
+            Duplicar como novo rascunho
+          </DropdownMenuItem>
+          {(isDraft || isOpen) && <DropdownMenuSeparator />}
+          {isDraft && (
             <DropdownMenuItem variant="destructive" onSelect={() => setDialog("delete")}>
               <Trash2Icon />
               Excluir rascunho
             </DropdownMenuItem>
-          ) : (
+          )}
+          {isOpen && (
             <DropdownMenuItem variant="destructive" onSelect={() => setDialog("cancel")}>
               <BanIcon />
               Cancelar proposta
@@ -117,7 +134,7 @@ export function QuoteActions({ quote, clientName, today }) {
         open={dialog === "send"}
         onOpenChange={close}
         title={`Enviar o orçamento ${quote.quote_number}?`}
-        description="Depois de enviado, o documento fica travado: itens, preços, cliente e condições não mudam mais. Para corrigir algo, será preciso cancelar e criar outro."
+        description="Depois de enviado, o documento fica travado: itens, preços, cliente e condições não mudam mais. Para corrigir algo depois, cancele e duplique como novo rascunho."
         confirmLabel="Enviar orçamento"
         pendingLabel="Enviando…"
         icon={<SendIcon data-icon="inline-start" />}

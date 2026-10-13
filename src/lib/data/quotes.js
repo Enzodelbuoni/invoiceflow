@@ -3,6 +3,8 @@ import { cache } from "react"
 
 import { calculateQuoteTotals } from "@/lib/calculations/quote"
 import { DataError, databaseError, getDataContext, isUuid } from "@/lib/data/shared"
+import { todayIso } from "@/lib/dates"
+import { toQuoteCopy } from "@/lib/quote-copy"
 import { isSupabaseConfigured } from "@/lib/supabase/env"
 
 // Camada de acesso a dados dos orçamentos (peças comuns em ./shared.js).
@@ -258,4 +260,17 @@ export async function listQuoteEvents(quoteId) {
     .order("created_at")
   if (error) throw databaseError("quotes", "query_failed", "Não foi possível carregar o histórico do orçamento.", error)
   return data
+}
+
+/**
+ * "Duplicar como novo rascunho" (Sprint 13): cria um orçamento NOVO (número
+ * novo, rascunho) com o cliente, os itens e as condições do original e a
+ * validade renovada. Grava pelo mesmo caminho do "salvar" (create_quote, com
+ * os totais recalculados), então vale para qualquer status do original.
+ * @returns {Promise<{ id: string, quote_number: string }>}
+ */
+export async function duplicateQuote(id) {
+  const source = await getQuote(id)
+  if (!source) throw new DataError("not_found", "Orçamento não encontrado.")
+  return insertQuote(toQuoteCopy(source, { today: todayIso() }))
 }

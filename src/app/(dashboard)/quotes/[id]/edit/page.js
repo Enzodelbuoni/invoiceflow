@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { LockIcon } from "lucide-react"
 
 import { PageHeader } from "@/components/layout/page-header"
+import { DuplicateQuoteButton } from "@/components/quotes/duplicate-quote-button"
 import { QuoteForm } from "@/components/quotes/quote-form"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
@@ -41,12 +42,15 @@ function NotEditable({ quote }) {
         </div>
         <p className="max-w-prose text-sm text-pretty text-muted-foreground">
           Só rascunhos podem ser alterados. Depois do envio, o documento que o cliente recebeu fica preservado
-          exatamente como foi enviado.
+          exatamente como foi enviado. Para fazer uma versão corrigida, duplique-o como um novo rascunho.
         </p>
       </div>
-      <Button asChild variant="outline">
-        <Link href={`/quotes/${quote.id}`}>Ver o orçamento</Link>
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <DuplicateQuoteButton quote={{ id: quote.id, quote_number: quote.quote_number }} />
+        <Button asChild variant="outline">
+          <Link href={`/quotes/${quote.id}`}>Ver o orçamento</Link>
+        </Button>
+      </div>
     </section>
   )
 }

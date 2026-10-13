@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { parseInput, toFailure } from "@/lib/action-result"
-import { cancelQuote, deleteQuote, insertQuote, sendQuote, updateQuote } from "@/lib/data/quotes"
+import { cancelQuote, deleteQuote, duplicateQuote, insertQuote, sendQuote, updateQuote } from "@/lib/data/quotes"
 import { todayIso } from "@/lib/dates"
 import { createQuoteSchema } from "@/lib/validations/quote"
 
@@ -80,6 +80,17 @@ export async function deleteQuoteAction(id) {
     await deleteQuote(id)
     revalidatePath("/quotes")
     return { ok: true }
+  } catch (error) {
+    return toFailure("quotes", error)
+  }
+}
+
+/** Duplica o orçamento como um rascunho novo (para corrigir ou reaproveitar). */
+export async function duplicateQuoteAction(id) {
+  try {
+    const { id: newId, quote_number } = await duplicateQuote(id)
+    revalidatePath("/quotes")
+    return { ok: true, id: newId, quoteNumber: quote_number }
   } catch (error) {
     return toFailure("quotes", error)
   }

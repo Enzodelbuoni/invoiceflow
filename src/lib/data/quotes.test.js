@@ -4,6 +4,7 @@ import { getDataContext } from "@/lib/data/shared"
 import {
   cancelQuote,
   deleteQuote,
+  duplicateQuote,
   getQuote,
   getQuoteDocument,
   insertQuote,
@@ -330,5 +331,40 @@ describe("deleteQuote", () => {
       code: "not_deletable",
       message: "Só rascunhos podem ser excluídos. Para tirar uma proposta enviada do ar, cancele-a.",
     })
+  })
+})
+
+describe("duplicateQuote", () => {
+  it("lê o original e grava a cópia pelo create_quote, com os totais recalculados", async () => {
+    const ID = "6f1c1d2e-0000-4000-8000-0000000000f7"
+    const original = {
+      id: ID,
+      quote_number: "2026-001",
+      status: "cancelled",
+      created_at: "2026-10-13T13:00:00+00:00",
+      ...quote({ valid_until: "2026-10-28" }),
+      // totais gravados no original: a cópia não os reaproveita, recalcula
+      total_cents: 1,
+      items: quote().items.map((item, position) => ({ ...item, position, subtotal_cents: 1 })),
+    }
+    const maybeSingle = vi.fn(async () => ({ data: original, error: null }))
+    const builder = { select: () => builder, eq: () => builder, maybeSingle }
+    const single = vi.fn(async () => ({ data: { id: "novo", quote_number: "2026-002" }, error: null }))
+    const rpc = vi.fn(() => ({ single }))
+    getDataContext.mockResolvedValue({ user: { id: "u1" }, supabase: { from: () => builder, rpc } })
+
+    await expect(duplicateQuote(ID)).resolves.toEqual({ id: "novo", quote_number: "2026-002" })
+    const [name, params] = rpc.mock.calls[0]
+    expect(name).toBe("create_quote")
+    expect(params.p_quote).toMatchObject({ client_id: CLIENT, title: "Site institucional", total_cents: 115810 })
+    expect(params.p_items.map((item) => item.subtotal_cents)).toEqual([100000, 22550])
+  })
+
+  it("original inexistente → não encontrado, sem gravar", async () => {
+    const builder = { select: () => builder, eq: () => builder, maybeSingle: vi.fn(async () => ({ data: null, error: null })) }
+    const rpc = vi.fn()
+    getDataContext.mockResolvedValue({ user: { id: "u1" }, supabase: { from: () => builder, rpc } })
+    await expect(duplicateQuote("6f1c1d2e-0000-4000-8000-0000000000f8")).rejects.toMatchObject({ code: "not_found" })
+    expect(rpc).not.toHaveBeenCalled()
   })
 })
