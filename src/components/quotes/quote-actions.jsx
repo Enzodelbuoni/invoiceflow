@@ -10,6 +10,7 @@ import {
   ExternalLinkIcon,
   LinkIcon,
   PencilLineIcon,
+  PrinterIcon,
   SendIcon,
   Trash2Icon,
   TriangleAlertIcon,
@@ -137,6 +138,11 @@ export function QuoteActions({ quote, clientName, today }) {
           <DropdownMenuItem disabled={duplicating} onSelect={() => duplicate(quote)}>
             <CopyIcon />
             Duplicar como novo rascunho
+          </DropdownMenuItem>
+          {/* Depois de o menu fechar, para ele não aparecer atrás da janela de impressão. */}
+          <DropdownMenuItem onSelect={() => requestAnimationFrame(() => window.print())}>
+            <PrinterIcon />
+            Imprimir ou salvar PDF
           </DropdownMenuItem>
           {(isDraft || isOpen) && <DropdownMenuSeparator />}
           {isDraft && (

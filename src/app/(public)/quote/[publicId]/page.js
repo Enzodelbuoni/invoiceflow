@@ -5,6 +5,7 @@ import { PublicQuoteStatus } from "@/components/public-quote/public-quote-status
 import { QuoteResponseActions } from "@/components/public-quote/quote-response-actions"
 import { RegisterQuoteView } from "@/components/public-quote/register-quote-view"
 import { QuotePreview } from "@/components/quotes/quote-preview"
+import { PrintButton } from "@/components/shared/print-button"
 import { getPublicQuote } from "@/lib/data/public-quotes"
 import { todayIso } from "@/lib/dates"
 import { publicQuoteState } from "@/lib/public-quote"
@@ -31,7 +32,7 @@ function RespondSection({ children }) {
   return (
     <section
       aria-labelledby="public-quote-respond-title"
-      className="mx-auto flex w-full max-w-[52rem] flex-col gap-4 rounded-2xl border bg-card p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6"
+      className="mx-auto flex w-full max-w-[52rem] flex-col gap-4 rounded-2xl border bg-card p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6 print:hidden"
     >
       <div className="flex flex-col gap-1">
         <h2 id="public-quote-respond-title" className="font-display text-2xl leading-tight">
@@ -94,6 +95,11 @@ export default async function PublicQuotePage({ params }) {
       >
         {actions}
       </PublicQuoteStatus>
+      {state !== "cancelled" && (
+        <div className="mx-auto -mb-2 flex w-full max-w-[52rem] justify-end print:hidden">
+          <PrintButton />
+        </div>
+      )}
       {state !== "cancelled" && (
         <QuotePreview
           quote={quote}

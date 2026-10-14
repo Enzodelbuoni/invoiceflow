@@ -31,11 +31,11 @@ export default async function DashboardLayout({ children }) {
           {/* Brilho sutil da marca no topo do painel. */}
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(60%_100%_at_50%_0%,color-mix(in_oklch,var(--primary)_9%,transparent),transparent)]"
+            className="pointer-events-none absolute inset-x-0 top-0 h-72 print:hidden bg-[radial-gradient(60%_100%_at_50%_0%,color-mix(in_oklch,var(--primary)_9%,transparent),transparent)]"
           />
           <AppHeader />
           <main id="conteudo" tabIndex={-1} className="relative w-full flex-1 outline-none">
-            <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8 md:py-10">{children}</div>
+            <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8 md:py-10 print:max-w-none print:p-0!">{children}</div>
           </main>
         </div>
       </SidebarInset>

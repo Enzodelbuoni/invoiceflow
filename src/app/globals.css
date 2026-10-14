@@ -282,6 +282,51 @@
   mix-blend-mode: normal;
 }
 
+/* Impressão / "Salvar como PDF" (Sprint 16). A folha A4 tem ~700 px úteis,
+   abaixo do breakpoint md: o painel já imprime como no celular (sem sidebar e
+   sem a rolagem interna). As páginas escondem o que não é documento com
+   print:hidden. Sem conteúdo nas margens (@page margin boxes): o Chrome
+   desenha o próprio cabeçalho/rodapé junto e os dois se sobreporiam. */
+@page {
+  size: A4;
+  margin: 12mm 12mm 14mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  /* O documento é "papel": fundos e cores (faixa da marca, caixas tingidas)
+     saem como na tela, mesmo com "gráficos de plano de fundo" desligado. */
+  .theme-paper {
+    print-color-adjust: exact;
+  }
+
+  /* Por segurança, se a folha for larga o bastante para o layout do desktop. */
+  [data-slot="sidebar-gap"],
+  [data-slot="sidebar-container"],
+  [data-sonner-toaster],
+  [data-radix-popper-content-wrapper] {
+    display: none !important;
+  }
+
+  /* Fundos do app (escuros no tema escuro) não vão para o papel. */
+  [data-slot="sidebar-wrapper"],
+  [data-slot="sidebar-inset"] {
+    background: transparent !important;
+  }
+
+  [data-slot="sidebar-inset"] {
+    margin: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+}
+
 /* Acessibilidade: quem pede menos movimento no sistema não recebe animações. */
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -14,7 +14,7 @@ export function AppHeader() {
   const current = findNavItem(pathname)
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b bg-background/75 px-4 backdrop-blur-xl backdrop-saturate-150 md:px-6">
+    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b bg-background/75 px-4 backdrop-blur-xl backdrop-saturate-150 md:px-6 print:hidden">
       <SidebarTrigger className="-ml-1.5 text-muted-foreground hover:text-foreground" />
       <Separator orientation="vertical" className="mr-1 data-vertical:h-4 data-vertical:self-center" />
 

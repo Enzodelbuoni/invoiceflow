@@ -43,7 +43,7 @@ function Header({ quote, issuer, label }) {
   const contact = [issuer.email, issuer.phone && formatPhone(issuer.phone)].filter(Boolean)
   const issued = quote.sent_at ?? quote.created_at
   return (
-    <header className="flex flex-col gap-6 @xl:flex-row @xl:items-start @xl:justify-between">
+    <header className="flex flex-col gap-6 break-inside-avoid @xl:flex-row @xl:items-start @xl:justify-between">
       <div className="flex min-w-0 items-center gap-3.5">
         <span
           aria-hidden="true"
@@ -152,7 +152,7 @@ function Items({ items }) {
   }
   return (
     <section aria-labelledby="quote-doc-items" className="flex flex-col gap-3">
-      <Eyebrow>
+      <Eyebrow className="break-after-avoid">
         <span id="quote-doc-items">Itens da proposta</span>
       </Eyebrow>
 
@@ -264,7 +264,7 @@ function Totals({ quote }) {
 function TextBlock({ title, children }) {
   return (
     <section className="flex flex-col gap-2 break-inside-avoid">
-      <h3 className="text-sm font-semibold">{title}</h3>
+      <h3 className="text-sm font-semibold break-after-avoid">{title}</h3>
       <p className="text-sm break-words whitespace-pre-line text-muted-foreground">{children}</p>
     </section>
   )
@@ -278,7 +278,7 @@ function Acceptance({ acceptance }) {
   return (
     <section
       aria-labelledby="quote-doc-acceptance"
-      className="flex flex-col gap-5 rounded-lg border border-status-approved/30 bg-status-approved/5 p-5 break-inside-avoid @xl:flex-row @xl:items-end @xl:justify-between @xl:p-6"
+      className="flex flex-col gap-5 rounded-lg border border-status-approved/30 bg-status-approved/5 p-5 break-inside-avoid @xl:flex-row @xl:items-end @xl:justify-between @xl:p-6 print:gap-3! print:p-5!"
     >
       <div className="flex min-w-0 flex-col gap-3">
         <Eyebrow>
@@ -327,13 +327,15 @@ export function QuotePreview({ quote, client, issuer, label, acceptance, classNa
       aria-label={quote.quote_number ? `Proposta Nº ${quote.quote_number}` : "Prévia da proposta"}
       className={cn(
         "theme-paper @container mx-auto w-full max-w-[52rem] overflow-hidden rounded-md shadow-xl ring-1 ring-black/5",
+        // Impressão: a folha já é o papel (sem moldura, sombra nem limite de largura).
+        "print:max-w-none print:overflow-visible print:rounded-none print:shadow-none print:ring-0",
         className,
       )}
     >
       {/* Faixa da marca no topo (a cor será personalizável no Sprint de identidade visual). */}
       <div aria-hidden="true" className="h-1.5 bg-primary" />
 
-      <div className="flex flex-col gap-9 px-5 py-7 @xl:gap-10 @xl:px-12 @xl:py-12">
+      <div className="flex flex-col gap-9 px-5 py-7 @xl:gap-10 @xl:px-12 @xl:py-12 print:gap-6! print:px-0! print:pt-6! print:pb-0!">
         <Header quote={quote} issuer={issuer} label={label} />
 
         <div className="flex flex-col gap-3">
@@ -345,7 +347,7 @@ export function QuotePreview({ quote, client, issuer, label, acceptance, classNa
           )}
         </div>
 
-        <div className="grid gap-3 @xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <div className="grid gap-3 break-inside-avoid @xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           <ClientCard client={client} />
           <Highlights quote={quote} />
         </div>
@@ -356,7 +358,7 @@ export function QuotePreview({ quote, client, issuer, label, acceptance, classNa
         </div>
 
         {(quote.notes || quote.terms) && (
-          <div className="flex flex-col gap-6 border-t pt-8">
+          <div className="flex flex-col gap-6 border-t pt-8 print:gap-5 print:pt-6">
             {quote.notes && <TextBlock title="Observações">{quote.notes}</TextBlock>}
             {quote.terms && <TextBlock title="Termos e condições">{quote.terms}</TextBlock>}
           </div>
@@ -364,7 +366,8 @@ export function QuotePreview({ quote, client, issuer, label, acceptance, classNa
 
         {acceptance && <Acceptance acceptance={acceptance} />}
 
-        <footer className="flex flex-col gap-1 border-t pt-5 text-xs text-muted-foreground @xl:flex-row @xl:justify-between">
+        {/* Na impressão sai o rodapé de cada página (número da proposta e página), e este repetiria o cabeçalho. */}
+        <footer className="flex flex-col gap-1 border-t pt-5 text-xs break-inside-avoid text-muted-foreground @xl:flex-row @xl:justify-between print:hidden">
           <p>
             {issuer.name}
             {quote.quote_number && ` · Proposta Nº ${quote.quote_number}`}

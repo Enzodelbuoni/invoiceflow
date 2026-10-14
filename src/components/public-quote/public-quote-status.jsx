@@ -105,7 +105,7 @@ export function PublicQuoteStatus({ state, quote, client, issuer, response, toda
   return (
     <section
       aria-labelledby="public-quote-status-title"
-      className="flex flex-col gap-5 rounded-2xl border bg-card p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6"
+      className="flex flex-col gap-5 rounded-2xl border bg-card p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6 print:hidden"
     >
       <div className="flex min-w-0 items-start gap-4">
         <span
