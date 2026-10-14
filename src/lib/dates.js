@@ -116,3 +116,14 @@ export function formatMomentRelative(value, now = new Date()) {
   const formatter = day.slice(0, 4) === today.slice(0, 4) ? dayMonthFormatter : dayMonthYearFormatter
   return `${formatter.format(date)} às ${time}`
 }
+
+/**
+ * Momento → "14 de out. de 2026 às 15:32" (fuso de São Paulo), sempre com o
+ * ano: para comprovantes e documentos. "" se inválido.
+ */
+export function formatMoment(value) {
+  if (value === null || value === undefined) return ""
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ""
+  return `${dayMonthYearFormatter.format(date)} às ${timeFormatter.format(date)}`
+}

@@ -1,7 +1,9 @@
+import { CircleCheckIcon } from "lucide-react"
+
 import { formatDocument, formatPhone } from "@/lib/br"
 import { DISCOUNT_TYPE } from "@/lib/constants/discount-types"
 import { formatServiceUnit } from "@/lib/constants/service-units"
-import { formatIsoDateLong, formatIsoDateShort } from "@/lib/dates"
+import { formatIsoDateLong, formatIsoDateShort, formatMoment } from "@/lib/dates"
 import { formatShortDate } from "@/lib/format"
 import { initials } from "@/lib/initials"
 import { formatCurrency } from "@/lib/money"
@@ -269,6 +271,36 @@ function TextBlock({ title, children }) {
 }
 
 /**
+ * Aceite eletrônico (Sprint 15): quem aprovou e quando, com o nome no lugar da
+ * assinatura. Fica no documento (página interna, pública e PDF).
+ */
+function Acceptance({ acceptance }) {
+  return (
+    <section
+      aria-labelledby="quote-doc-acceptance"
+      className="flex flex-col gap-5 rounded-lg border border-status-approved/30 bg-status-approved/5 p-5 break-inside-avoid @xl:flex-row @xl:items-end @xl:justify-between @xl:p-6"
+    >
+      <div className="flex min-w-0 flex-col gap-3">
+        <Eyebrow>
+          <span id="quote-doc-acceptance">Aceite eletrônico</span>
+        </Eyebrow>
+        <div className="flex min-w-0 flex-col">
+          <p className="truncate font-display text-3xl leading-tight italic">{acceptance.signer_name}</p>
+          <span aria-hidden="true" className="mt-1 h-px w-full max-w-72 bg-foreground/25" />
+          <p className="mt-2 text-sm text-pretty text-muted-foreground">
+            Aceito eletronicamente em {formatMoment(acceptance.responded_at)} (horário de Brasília).
+          </p>
+        </div>
+      </div>
+      <p className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-status-approved">
+        <CircleCheckIcon aria-hidden="true" className="size-4" />
+        Proposta aprovada
+      </p>
+    </section>
+  )
+}
+
+/**
  * O documento do orçamento.
  * @param {{
  *   quote: { quote_number: string|null, status?: string, title: string, description: string|null,
@@ -282,12 +314,14 @@ function TextBlock({ title, children }) {
  *     document?: string|null, address?: string|null } | null,
  *   issuer: { name: string, email?: string|null, phone?: string|null },
  *   label?: string,
+ *   acceptance?: { signer_name: string, responded_at: string } | null,
  *   className?: string,
  * }} props
  *   `label`: selo ao lado de "Proposta comercial" ("Rascunho", "Prévia"), para
- *   ninguém confundir com o documento enviado.
+ *   ninguém confundir com o documento enviado. `acceptance`: o aceite do
+ *   cliente, quando a proposta foi aprovada.
  */
-export function QuotePreview({ quote, client, issuer, label, className }) {
+export function QuotePreview({ quote, client, issuer, label, acceptance, className }) {
   return (
     <article
       aria-label={quote.quote_number ? `Proposta Nº ${quote.quote_number}` : "Prévia da proposta"}
@@ -327,6 +361,8 @@ export function QuotePreview({ quote, client, issuer, label, className }) {
             {quote.terms && <TextBlock title="Termos e condições">{quote.terms}</TextBlock>}
           </div>
         )}
+
+        {acceptance && <Acceptance acceptance={acceptance} />}
 
         <footer className="flex flex-col gap-1 border-t pt-5 text-xs text-muted-foreground @xl:flex-row @xl:justify-between">
           <p>

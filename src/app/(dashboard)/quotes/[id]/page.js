@@ -3,10 +3,11 @@ import { notFound } from "next/navigation"
 import { PageHeader } from "@/components/layout/page-header"
 import { QuoteActions } from "@/components/quotes/quote-actions"
 import { QuotePreview } from "@/components/quotes/quote-preview"
+import { QuoteResponseCard } from "@/components/quotes/quote-response-card"
 import { QuoteTimeline } from "@/components/quotes/quote-timeline"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { QUOTE_STATUS_DESCRIPTIONS } from "@/lib/constants/quote-status"
-import { getQuoteDocument, listQuoteEvents } from "@/lib/data/quotes"
+import { getQuoteDocument, getQuoteResponse, listQuoteEvents } from "@/lib/data/quotes"
 import { todayIso } from "@/lib/dates"
 
 export async function generateMetadata({ params }) {
@@ -16,15 +17,29 @@ export async function generateMetadata({ params }) {
 }
 
 // Selo no documento quando ele não é (ou não é mais) a proposta em vigor.
-const DOCUMENT_LABELS = Object.freeze({ draft: "Rascunho", cancelled: "Cancelada", expired: "Expirada" })
+const DOCUMENT_LABELS = Object.freeze({
+  draft: "Rascunho",
+  declined: "Recusada",
+  cancelled: "Cancelada",
+  expired: "Expirada",
+})
 
-/** Visualização interna do orçamento: o documento como o cliente vai receber + histórico. */
+/**
+ * Visualização interna do orçamento: o documento como o cliente vai receber,
+ * a resposta do cliente (aceite ou recusa) e o histórico.
+ */
 export default async function QuotePage({ params }) {
   const { id } = await params
-  const [document, events] = await Promise.all([getQuoteDocument(id), listQuoteEvents(id)])
+  const [document, events, response] = await Promise.all([
+    getQuoteDocument(id),
+    listQuoteEvents(id),
+    getQuoteResponse(id),
+  ])
   if (!document) notFound()
 
   const { quote, client, issuer } = document
+  const acceptance =
+    response?.decision === "approved" ? { signer_name: response.signer_name, responded_at: response.created_at } : null
 
   return (
     <>
@@ -43,9 +58,18 @@ export default async function QuotePage({ params }) {
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_17rem]">
         {/* A "mesa" onde o documento fica: destaca o papel nos dois temas. */}
         <div className="rounded-2xl border bg-muted/50 px-2 py-4 sm:p-8 dark:bg-muted/30">
-          <QuotePreview quote={quote} client={client} issuer={issuer} label={DOCUMENT_LABELS[quote.status]} />
+          <QuotePreview
+            quote={quote}
+            client={client}
+            issuer={issuer}
+            label={DOCUMENT_LABELS[quote.status]}
+            acceptance={acceptance}
+          />
         </div>
-        <QuoteTimeline events={events} className="xl:sticky xl:top-20" />
+        <div className="flex flex-col gap-4 xl:sticky xl:top-20">
+          {response && <QuoteResponseCard response={response} />}
+          <QuoteTimeline events={events} />
+        </div>
       </div>
     </>
   )

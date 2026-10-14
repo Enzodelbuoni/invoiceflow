@@ -263,6 +263,24 @@ export async function listQuoteEvents(quoteId) {
 }
 
 /**
+ * Resposta do cliente (Sprint 15): o aceite eletrônico (nome, e-mail, IP,
+ * navegador, data) ou a recusa (motivo), ou `null` se ainda não respondeu.
+ * Gravada pelas funções da página pública; o dono só lê.
+ */
+export async function getQuoteResponse(quoteId) {
+  if (!isUuid(quoteId)) return null
+  const { user, supabase } = await getDataContext()
+  const { data, error } = await supabase
+    .from("quote_responses")
+    .select("decision, signer_name, signer_email, reason, ip_address, user_agent, created_at")
+    .eq("quote_id", quoteId)
+    .eq("user_id", user.id)
+    .maybeSingle()
+  if (error) throw databaseError("quotes", "query_failed", "Não foi possível carregar a resposta do cliente.", error)
+  return data
+}
+
+/**
  * "Duplicar como novo rascunho" (Sprint 13): cria um orçamento NOVO (número
  * novo, rascunho) com o cliente, os itens e as condições do original e a
  * validade renovada. Grava pelo mesmo caminho do "salvar" (create_quote, com

@@ -6,6 +6,7 @@ import {
   describeDaysFromToday,
   formatIsoDateLong,
   formatIsoDateShort,
+  formatMoment,
   formatMomentRelative,
   isIsoDate,
   todayIso,
@@ -119,5 +120,21 @@ describe("formatMomentRelative (fuso de São Paulo)", () => {
   it("valor inválido → texto vazio", () => {
     expect(formatMomentRelative("ontem", NOW)).toBe("")
     expect(formatMomentRelative(undefined, NOW)).toBe("")
+  })
+})
+
+describe("formatMoment (fuso de São Paulo)", () => {
+  it.each([
+    ["2026-10-14T18:32:00Z", "14 de out. de 2026 às 15:32"],
+    ["2026-10-15T02:05:00Z", "14 de out. de 2026 às 23:05"], // ainda dia 14 em SP
+    ["2026-10-14T18:32:00.123456+00:00", "14 de out. de 2026 às 15:32"], // como o Postgres devolve
+  ])("%s → %s", (value, text) => {
+    expect(formatMoment(value)).toBe(text)
+  })
+
+  it("valor inválido → texto vazio", () => {
+    expect(formatMoment("amanhã")).toBe("")
+    expect(formatMoment(null)).toBe("") // new Date(null) seria 1970
+    expect(formatMoment(undefined)).toBe("")
   })
 })

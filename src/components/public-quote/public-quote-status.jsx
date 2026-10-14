@@ -1,7 +1,7 @@
 import { BanIcon, CircleCheckIcon, CircleXIcon, FileTextIcon, MailIcon, MessageCircleIcon, TimerOffIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { daysBetweenIso, describeDaysFromToday, formatIsoDateLong, formatIsoDateShort } from "@/lib/dates"
+import { daysBetweenIso, describeDaysFromToday, formatIsoDateLong, formatIsoDateShort, formatMoment } from "@/lib/dates"
 import { formatShortDate } from "@/lib/format"
 import { formatCurrency } from "@/lib/money"
 import { whatsappUrl } from "@/lib/public-quote"
@@ -25,17 +25,23 @@ const ICONS = {
 }
 
 /** Título e texto do aviso, conforme a situação da proposta. */
-function copyFor(state, { quote, client, issuer, today }) {
+function copyFor(state, { quote, client, issuer, response, today }) {
   switch (state) {
     case "approved":
       return {
         title: "Proposta aprovada",
-        text: quote.approved_at ? `Aprovada em ${formatShortDate(quote.approved_at)}.` : "Esta proposta já foi aprovada.",
+        text: response?.signer_name
+          ? `Aprovada por ${response.signer_name} em ${formatMoment(response.responded_at)}.`
+          : quote.approved_at
+            ? `Aprovada em ${formatShortDate(quote.approved_at)}.`
+            : "Esta proposta já foi aprovada.",
       }
     case "declined":
       return {
         title: "Proposta recusada",
-        text: quote.declined_at ? `Recusada em ${formatShortDate(quote.declined_at)}.` : "Esta proposta foi recusada.",
+        text: quote.declined_at
+          ? `Recusada em ${formatMoment(quote.declined_at)}. Para negociar uma nova proposta, fale com ${issuer.name}.`
+          : "Esta proposta foi recusada.",
       }
     case "expired":
       return {
@@ -56,7 +62,7 @@ function copyFor(state, { quote, client, issuer, today }) {
 }
 
 /** Botões de contato com quem enviou (e-mail e WhatsApp, quando houver). */
-function Contact({ issuer, quote }) {
+export function IssuerContact({ issuer, quote }) {
   const whatsapp = whatsappUrl(issuer.phone)
   if (!issuer.email && !whatsapp) return null
   const subject = encodeURIComponent(`Proposta Nº ${quote.quote_number}`)
@@ -86,12 +92,14 @@ function Contact({ issuer, quote }) {
  * Aviso no topo da página pública: a situação da proposta (aberta, aprovada,
  * recusada, expirada, cancelada), o total e o contato de quem enviou.
  * @param {{ state: "open"|"approved"|"declined"|"expired"|"cancelled",
- *   quote: object, client: object|null, issuer: object, today: string, children?: React.ReactNode }} props
- *   `children`: ações (aprovar/recusar, Sprint 15).
+ *   quote: object, client: object|null, issuer: object, response?: object|null, today: string,
+ *   children?: React.ReactNode }} props
+ *   `response`: a resposta do cliente (quem aprovou e quando); `children`: os
+ *   botões de aprovar/recusar.
  */
-export function PublicQuoteStatus({ state, quote, client, issuer, today, children }) {
+export function PublicQuoteStatus({ state, quote, client, issuer, response, today, children }) {
   const Icon = ICONS[state] ?? FileTextIcon
-  const { title, text } = copyFor(state, { quote, client, issuer, today })
+  const { title, text } = copyFor(state, { quote, client, issuer, response, today })
   const showTotal = state !== "cancelled" && typeof quote.total_cents === "number"
 
   return (
@@ -112,7 +120,7 @@ export function PublicQuoteStatus({ state, quote, client, issuer, today, childre
           </h1>
           <p className="text-sm text-pretty text-muted-foreground">{text}</p>
           <div className="mt-2">
-            <Contact issuer={issuer} quote={quote} />
+            <IssuerContact issuer={issuer} quote={quote} />
           </div>
         </div>
       </div>
