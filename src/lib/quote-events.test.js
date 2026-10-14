@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs"
 
 import { describe, expect, it } from "vitest"
 
-import { QUOTE_EVENT_LABELS, summarizeQuoteEvents } from "./quote-events"
+import { QUOTE_EVENT_LABELS, quoteEventLabel, summarizeQuoteEvents } from "./quote-events"
 
 const event = (id, type, minute) => ({ id, type, created_at: `2026-10-13T17:${String(minute).padStart(2, "0")}:00Z` })
 
@@ -36,6 +36,28 @@ describe("summarizeQuoteEvents", () => {
       event("3", "updated", 2),
     ]).map((item) => `${item.type}×${item.count}`)
     expect(types).toEqual(["updated×1", "cancelled×1", "updated×1"])
+  })
+
+  it("downloads seguidos do mesmo lado viram um item; de lados diferentes, não", () => {
+    const download = (id, by, minute) => ({ ...event(id, "downloaded", minute), metadata: { by } })
+    const items = summarizeQuoteEvents([
+      event("1", "sent", 0),
+      download("2", "client", 1),
+      download("3", "client", 20),
+      download("4", "owner", 21),
+    ])
+    expect(items.map((item) => [item.type, item.by, item.count])).toEqual([
+      ["downloaded", "owner", 1],
+      ["downloaded", "client", 2],
+      ["sent", undefined, 1],
+    ])
+    expect(items.map(quoteEventLabel)).toEqual(["PDF baixado por você", "PDF baixado pelo cliente", "Enviado ao cliente"])
+  })
+
+  it("rótulo do download sem metadata (ou desconhecido) → o genérico", () => {
+    expect(quoteEventLabel({ type: "downloaded" })).toBe("PDF baixado")
+    expect(quoteEventLabel({ type: "downloaded", by: "robô" })).toBe("PDF baixado")
+    expect(quoteEventLabel({ type: "algo-novo" })).toBe("algo-novo")
   })
 
   it("lista vazia → nada; não altera os eventos recebidos", () => {

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation"
 import { PublicQuoteConfirmation } from "@/components/public-quote/public-quote-confirmation"
 import { PublicQuoteShell } from "@/components/public-quote/public-quote-shell"
 import { getPublicQuote } from "@/lib/data/public-quotes"
+import { isPdfAvailable } from "@/lib/pdf/render"
 
 // Páginas de confirmação depois da resposta do cliente (Sprint 15):
 // /quote/<id>/approved e /quote/<id>/declined. Quem abre uma delas sem que a
@@ -40,6 +41,7 @@ export async function ConfirmationPage({ decision, params }) {
         quote={quote}
         issuer={issuer}
         response={response}
+        pdfAvailable={isPdfAvailable()}
       />
     </PublicQuoteShell>
   )

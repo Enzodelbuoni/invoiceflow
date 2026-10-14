@@ -35,6 +35,17 @@ export async function registerQuoteView(publicId) {
   if (error) throw databaseError("public-quotes", "view_failed", "Não foi possível registrar a visualização.", error)
 }
 
+/**
+ * Registra "PDF baixado" no histórico (Sprint 16). O banco decide se foi o
+ * cliente ou o dono e ignora repetições do mesmo lado em 10 minutos.
+ */
+export async function registerQuoteDownload(publicId) {
+  if (!isUuid(publicId) || !isSupabaseConfigured()) return
+  const supabase = await createClient()
+  const { error } = await supabase.rpc("register_quote_download", { p_public_id: publicId })
+  if (error) throw databaseError("public-quotes", "download_failed", "Não foi possível registrar o download.", error)
+}
+
 // ── Resposta do cliente (Sprint 15) ──────────────────────────────────
 
 const NOT_FOUND = "Esta proposta não foi encontrada."

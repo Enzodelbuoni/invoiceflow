@@ -5,9 +5,11 @@ import { PublicQuoteStatus } from "@/components/public-quote/public-quote-status
 import { QuoteResponseActions } from "@/components/public-quote/quote-response-actions"
 import { RegisterQuoteView } from "@/components/public-quote/register-quote-view"
 import { QuotePreview } from "@/components/quotes/quote-preview"
+import { DownloadPdfButton } from "@/components/shared/download-pdf-button"
 import { PrintButton } from "@/components/shared/print-button"
 import { getPublicQuote } from "@/lib/data/public-quotes"
 import { todayIso } from "@/lib/dates"
+import { isPdfAvailable } from "@/lib/pdf/render"
 import { publicQuoteState } from "@/lib/public-quote"
 
 // Proposta não é conteúdo para buscadores: o link é privado de quem o recebeu.
@@ -96,8 +98,15 @@ export default async function PublicQuotePage({ params }) {
         {actions}
       </PublicQuoteStatus>
       {state !== "cancelled" && (
-        <div className="mx-auto -mb-2 flex w-full max-w-[52rem] justify-end print:hidden">
-          <PrintButton />
+        <div className="mx-auto -mb-2 flex w-full max-w-[52rem] flex-wrap justify-end gap-2 print:hidden">
+          {isPdfAvailable() ? (
+            <>
+              <PrintButton variant="ghost">Imprimir</PrintButton>
+              <DownloadPdfButton publicId={publicId} quoteNumber={quote.quote_number} />
+            </>
+          ) : (
+            <PrintButton />
+          )}
         </div>
       )}
       {state !== "cancelled" && (

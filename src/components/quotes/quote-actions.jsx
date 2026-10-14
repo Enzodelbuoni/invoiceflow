@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import {
   BanIcon,
   CopyIcon,
+  DownloadIcon,
   EllipsisIcon,
   ExternalLinkIcon,
   LinkIcon,
@@ -31,6 +32,8 @@ import {
 import { useDuplicateQuote } from "@/hooks/use-duplicate-quote"
 import { formatIsoDateShort } from "@/lib/dates"
 import { formatCurrency } from "@/lib/money"
+import { pdfFileName, quotePdfUrl } from "@/lib/pdf/document"
+import { downloadPdf } from "@/lib/pdf-download"
 
 /** Endereço da página pública da proposta (o cliente abre sem login). */
 function publicQuoteUrl(publicId) {
@@ -46,6 +49,15 @@ async function copyQuoteLink(quote) {
   } catch {
     toast.info("Copie o link da proposta", { description: url, duration: 15000 })
   }
+}
+
+/** Baixa o PDF gerado no servidor, com o andamento num aviso ("Gerando PDF…"). */
+function downloadQuotePdf(quote) {
+  toast.promise(downloadPdf(quotePdfUrl(quote.public_id), pdfFileName(quote.quote_number)), {
+    loading: "Gerando PDF…",
+    success: `PDF da proposta ${quote.quote_number} pronto`,
+    error: (error) => ({ message: "Não foi possível baixar o PDF", description: error.message }),
+  })
 }
 
 /** Resumo do que vai ser enviado, dentro da confirmação. */
@@ -82,18 +94,23 @@ function SendSummary({ quote, clientName, validityPassed }) {
  * Ações da página do orçamento, conforme o status (máquina de estados do
  * Sprint 12): rascunho → editar, enviar, excluir; enviado/visualizado →
  * copiar link e cancelar; fora do rascunho → abrir a página do cliente;
- * qualquer status → duplicar como novo rascunho (Sprint 13). Cada mudança de status passa por uma confirmação e por
- * uma função do banco que confere o status de novo.
+ * qualquer status → duplicar como novo rascunho (Sprint 13) e imprimir; com
+ * documento público (nem rascunho nem cancelada) → baixar o PDF (Sprint 16).
+ * Cada mudança de status passa por uma confirmação e por uma função do banco
+ * que confere o status de novo.
  * @param {{ quote: { id: string, public_id: string, quote_number: string, status: string, total_cents: number, valid_until: string },
- *   clientName: string|null, today: string }} props
+ *   clientName: string|null, today: string, pdfAvailable?: boolean }} props
+ *   `pdfAvailable`: o servidor gera PDF (senão, só a impressão do navegador).
  */
-export function QuoteActions({ quote, clientName, today }) {
+export function QuoteActions({ quote, clientName, today, pdfAvailable = false }) {
   const router = useRouter()
   const [dialog, setDialog] = useState(null) // "send" | "cancel" | "delete" | null
   const { duplicate, pending: duplicating } = useDuplicateQuote()
   const isDraft = quote.status === "draft"
   const isOpen = quote.status === "sent" || quote.status === "viewed"
   const validityPassed = quote.valid_until < today
+  // O PDF sai da página pública: rascunho e cancelada não têm uma.
+  const canDownloadPdf = pdfAvailable && !isDraft && quote.status !== "cancelled"
   const close = (open) => !open && setDialog(null)
 
   return (
@@ -139,6 +156,12 @@ export function QuoteActions({ quote, clientName, today }) {
             <CopyIcon />
             Duplicar como novo rascunho
           </DropdownMenuItem>
+          {canDownloadPdf && (
+            <DropdownMenuItem onSelect={() => downloadQuotePdf(quote)}>
+              <DownloadIcon />
+              Baixar PDF
+            </DropdownMenuItem>
+          )}
           {/* Depois de o menu fechar, para ele não aparecer atrás da janela de impressão. */}
           <DropdownMenuItem onSelect={() => requestAnimationFrame(() => window.print())}>
             <PrinterIcon />

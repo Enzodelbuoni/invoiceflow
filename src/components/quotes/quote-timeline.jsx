@@ -11,7 +11,7 @@ import {
 } from "lucide-react"
 
 import { formatMomentRelative } from "@/lib/dates"
-import { QUOTE_EVENT_LABELS, summarizeQuoteEvents } from "@/lib/quote-events"
+import { quoteEventLabel, summarizeQuoteEvents } from "@/lib/quote-events"
 import { cn } from "@/lib/utils"
 
 // Ícone e cor de cada evento (classes por extenso para o Tailwind gerá-las).
@@ -59,7 +59,7 @@ export function QuoteTimeline({ events, className }) {
                 </span>
                 <div className="flex min-w-0 flex-col gap-0.5 pt-1">
                   <p className="text-sm font-medium">
-                    {QUOTE_EVENT_LABELS[item.type] ?? item.type}
+                    {quoteEventLabel(item)}
                     {item.count > 1 && <span className="font-normal text-muted-foreground"> · {item.count} vezes</span>}
                   </p>
                   <p className="text-xs text-muted-foreground">

@@ -2,6 +2,7 @@ import Link from "next/link"
 import { ArrowLeftIcon } from "lucide-react"
 
 import { IssuerContact } from "@/components/public-quote/public-quote-status"
+import { DownloadPdfButton } from "@/components/shared/download-pdf-button"
 import { Button } from "@/components/ui/button"
 import { formatMoment } from "@/lib/dates"
 import { formatCurrency } from "@/lib/money"
@@ -63,9 +64,10 @@ function ReceiptRow({ label, children, className }) {
  * @param {{ decision: "approved"|"declined", publicId: string,
  *   quote: { quote_number: string, title: string, total_cents: number },
  *   issuer: { name: string, email?: string|null, phone?: string|null },
- *   response: { signer_name: string|null, responded_at: string } }} props
+ *   response: { signer_name: string|null, responded_at: string }, pdfAvailable?: boolean }} props
+ *   `pdfAvailable`: o servidor gera PDF (a aprovação oferece baixar a proposta aprovada).
  */
-export function PublicQuoteConfirmation({ decision, publicId, quote, issuer, response }) {
+export function PublicQuoteConfirmation({ decision, publicId, quote, issuer, response, pdfAvailable = false }) {
   const approved = decision === "approved"
   const firstName = response.signer_name?.trim().split(/\s+/)[0]
   const moment = formatMoment(response.responded_at)
@@ -134,6 +136,11 @@ export function PublicQuoteConfirmation({ decision, publicId, quote, issuer, res
             : `Mudou de ideia ou quer negociar? Fale com ${issuer.name}.`}
         </p>
         <IssuerContact issuer={issuer} quote={quote} />
+        {approved && pdfAvailable && (
+          <DownloadPdfButton publicId={publicId} quoteNumber={quote.quote_number} className="mt-2">
+            Baixar a proposta aprovada (PDF)
+          </DownloadPdfButton>
+        )}
         <Button asChild variant="link" className="mt-1">
           <Link href={`/quote/${publicId}`}>
             <ArrowLeftIcon data-icon="inline-start" />

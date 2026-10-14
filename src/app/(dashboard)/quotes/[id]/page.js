@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/shared/status-badge"
 import { QUOTE_STATUS_DESCRIPTIONS } from "@/lib/constants/quote-status"
 import { getQuoteDocument, getQuoteResponse, listQuoteEvents } from "@/lib/data/quotes"
 import { todayIso } from "@/lib/dates"
+import { isPdfAvailable } from "@/lib/pdf/render"
 
 export async function generateMetadata({ params }) {
   const { id } = await params
@@ -51,7 +52,12 @@ export default async function QuotePage({ params }) {
         actions={
           <>
             <StatusBadge status={quote.status} className="mr-1" />
-            <QuoteActions quote={quote} clientName={client?.name ?? null} today={todayIso()} />
+            <QuoteActions
+              quote={quote}
+              clientName={client?.name ?? null}
+              today={todayIso()}
+              pdfAvailable={isPdfAvailable()}
+            />
           </>
         }
       />
