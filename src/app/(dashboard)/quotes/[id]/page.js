@@ -54,7 +54,7 @@ export default async function QuotePage({ params }) {
             <StatusBadge status={quote.status} className="mr-1" />
             <QuoteActions
               quote={quote}
-              clientName={client?.name ?? null}
+              client={client ? { name: client.name, phone: client.phone, email: client.email } : null}
               today={todayIso()}
               pdfAvailable={isPdfAvailable()}
             />

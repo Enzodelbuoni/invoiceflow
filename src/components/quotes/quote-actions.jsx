@@ -13,12 +13,14 @@ import {
   PencilLineIcon,
   PrinterIcon,
   SendIcon,
+  Share2Icon,
   Trash2Icon,
   TriangleAlertIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 
 import { cancelQuoteAction, deleteQuoteAction, sendQuoteAction } from "@/actions/quotes"
+import { ShareQuoteDialog } from "@/components/quotes/share-quote-dialog"
 import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog"
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog"
 import { Button } from "@/components/ui/button"
@@ -34,15 +36,11 @@ import { formatIsoDateShort } from "@/lib/dates"
 import { formatCurrency } from "@/lib/money"
 import { pdfFileName, quotePdfUrl } from "@/lib/pdf/document"
 import { downloadPdf } from "@/lib/pdf-download"
-
-/** Endereço da página pública da proposta (o cliente abre sem login). */
-function publicQuoteUrl(publicId) {
-  return `${window.location.origin}/quote/${publicId}`
-}
+import { publicQuoteUrl } from "@/lib/share"
 
 /** Copia o link da proposta, com aviso (e o link no aviso, se a cópia falhar). */
 async function copyQuoteLink(quote) {
-  const url = publicQuoteUrl(quote.public_id)
+  const url = publicQuoteUrl(quote.public_id, window.location.origin)
   try {
     await navigator.clipboard.writeText(url)
     toast.success("Link copiado", { description: "Cole na conversa com o cliente. Ele abre sem precisar de conta." })
@@ -93,18 +91,22 @@ function SendSummary({ quote, clientName, validityPassed }) {
 /**
  * Ações da página do orçamento, conforme o status (máquina de estados do
  * Sprint 12): rascunho → editar, enviar, excluir; enviado/visualizado →
- * copiar link e cancelar; fora do rascunho → abrir a página do cliente;
+ * compartilhar (Sprint 17: link, WhatsApp, e-mail; abre sozinho depois do
+ * envio), copiar link e cancelar; fora do rascunho → abrir a página do cliente;
  * qualquer status → duplicar como novo rascunho (Sprint 13) e imprimir; com
  * documento público (nem rascunho nem cancelada) → baixar o PDF (Sprint 16).
  * Cada mudança de status passa por uma confirmação e por uma função do banco
  * que confere o status de novo.
- * @param {{ quote: { id: string, public_id: string, quote_number: string, status: string, total_cents: number, valid_until: string },
- *   clientName: string|null, today: string, pdfAvailable?: boolean }} props
+ * @param {{ quote: { id: string, public_id: string, quote_number: string, status: string, title: string,
+ *     total_cents: number, valid_until: string },
+ *   client: { name: string, phone?: string|null, email?: string|null } | null,
+ *   today: string, pdfAvailable?: boolean }} props
+ *   `client`: nome e contatos (o compartilhar manda para o telefone/e-mail dele);
  *   `pdfAvailable`: o servidor gera PDF (senão, só a impressão do navegador).
  */
-export function QuoteActions({ quote, clientName, today, pdfAvailable = false }) {
+export function QuoteActions({ quote, client, today, pdfAvailable = false }) {
   const router = useRouter()
-  const [dialog, setDialog] = useState(null) // "send" | "cancel" | "delete" | null
+  const [dialog, setDialog] = useState(null) // "send" | "share" | "share-sent" | "cancel" | "delete" | null
   const { duplicate, pending: duplicating } = useDuplicateQuote()
   const isDraft = quote.status === "draft"
   const isOpen = quote.status === "sent" || quote.status === "viewed"
@@ -130,9 +132,9 @@ export function QuoteActions({ quote, clientName, today, pdfAvailable = false })
         </>
       )}
       {isOpen && (
-        <Button variant="outline" className="h-10" onClick={() => copyQuoteLink(quote)}>
-          <LinkIcon data-icon="inline-start" />
-          Copiar link
+        <Button id="quote-share-trigger" className="h-10 shadow-sm" onClick={() => setDialog("share")}>
+          <Share2Icon data-icon="inline-start" />
+          Compartilhar
         </Button>
       )}
 
@@ -144,6 +146,12 @@ export function QuoteActions({ quote, clientName, today, pdfAvailable = false })
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-52">
+          {isOpen && (
+            <DropdownMenuItem onSelect={() => copyQuoteLink(quote)}>
+              <LinkIcon />
+              Copiar link
+            </DropdownMenuItem>
+          )}
           {!isDraft && (
             <DropdownMenuItem asChild>
               <a href={`/quote/${quote.public_id}`} target="_blank" rel="noopener noreferrer">
@@ -192,15 +200,30 @@ export function QuoteActions({ quote, clientName, today, pdfAvailable = false })
         pendingLabel="Enviando…"
         icon={<SendIcon data-icon="inline-start" />}
         action={() => sendQuoteAction(quote.id)}
-        onDone={() =>
-          toast.success("Orçamento enviado", {
-            description: "Agora copie o link e mande para o cliente.",
-            action: { label: "Copiar link", onClick: () => copyQuoteLink(quote) },
-          })
-        }
+        onDone={() => {
+          toast.success("Orçamento enviado", { description: `Orçamento ${quote.quote_number}` })
+          // Enviar só trava o documento: o próximo passo é mandar o link ao cliente.
+          setDialog("share-sent")
+        }}
       >
-        <SendSummary quote={quote} clientName={clientName} validityPassed={validityPassed} />
+        <SendSummary quote={quote} clientName={client?.name ?? null} validityPassed={validityPassed} />
       </ConfirmActionDialog>
+
+      <ShareQuoteDialog
+        open={dialog === "share" || dialog === "share-sent"}
+        onOpenChange={close}
+        quote={quote}
+        client={client}
+        justSent={dialog === "share-sent"}
+        onCloseAutoFocus={(event) => {
+          // O diálogo não tem gatilho próprio (abre também depois do envio): o foco volta ao "Compartilhar".
+          const trigger = document.getElementById("quote-share-trigger")
+          if (trigger) {
+            event.preventDefault()
+            trigger.focus()
+          }
+        }}
+      />
 
       <ConfirmActionDialog
         open={dialog === "cancel"}

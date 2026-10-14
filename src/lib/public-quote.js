@@ -18,9 +18,6 @@ export function publicQuoteState(quote, today) {
   return "open"
 }
 
-/** "11999998888" → link do WhatsApp com o DDI do Brasil; sem telefone → null. */
-export function whatsappUrl(phone) {
-  const digits = String(phone ?? "").replace(/\D/g, "")
-  if (digits.length < 10) return null
-  return `https://wa.me/55${digits}`
-}
+// Link do WhatsApp (contato com quem enviou): mora em lib/share.js, junto com o
+// compartilhamento da proposta (Sprint 17).
+export { whatsappUrl } from "@/lib/share"
