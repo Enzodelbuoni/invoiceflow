@@ -169,3 +169,25 @@ export function caretAfterMask(raw, caret, masked) {
   }
   return position
 }
+
+const compactCurrencyFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+  notation: "compact",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 1,
+})
+
+/** A partir de R$ 1 milhão os indicadores mostram o valor compacto. */
+const COMPACT_FROM_CENTS = 100_000_000
+
+/**
+ * Centavos → valor para indicadores: exato até R$ 999.999,99 ("R$ 69.126,75");
+ * a partir de R$ 1 milhão, compacto ("R$ 1,2 mi", "R$ 12,3 mi"). Quem mostra o
+ * compacto deve oferecer o exato (title/leitor de tela) com formatCurrency.
+ */
+export function formatCurrencyCompact(cents) {
+  assertCents(cents)
+  if (Math.abs(cents) < COMPACT_FROM_CENTS) return formatCurrency(cents)
+  return compactCurrencyFormatter.format(centsToDecimalString(cents))
+}

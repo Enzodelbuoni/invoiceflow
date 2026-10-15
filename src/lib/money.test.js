@@ -5,6 +5,7 @@ import {
   MAX_PRICE_INTEGER_DIGITS,
   caretAfterMask,
   formatCurrency,
+  formatCurrencyCompact,
   formatCurrencyInput,
   isCents,
   maskCurrencyInput,
@@ -244,5 +245,29 @@ describe("caretAfterMask", () => {
   it("zero à esquerda removido não desloca o cursor", () => {
     // "|5" + "0" → "0|5" → "5" com o cursor no início
     expect(caretAfterMask("05", 1, "5")).toBe(0)
+  })
+})
+
+describe("formatCurrencyCompact", () => {
+  // O Intl usa espaço não separável (U+00A0) entre "R$", o número e "mi"/"bi".
+  const nbsp = (text) => text.replaceAll(" ", " ")
+
+  it("exato até R$ 999.999,99", () => {
+    expect(formatCurrencyCompact(6912675)).toBe(formatCurrency(6912675))
+    expect(formatCurrencyCompact(99999999)).toBe(formatCurrency(99999999))
+    expect(formatCurrencyCompact(0)).toBe(formatCurrency(0))
+  })
+
+  it.each([
+    [100000000, "R$ 1 mi"],
+    [123456789, "R$ 1,2 mi"],
+    [1234567890, "R$ 12,3 mi"],
+    [99999999999, "R$ 1 bi"],
+  ])("%i centavos → %s", (cents, text) => {
+    expect(formatCurrencyCompact(cents)).toBe(nbsp(text))
+  })
+
+  it("recusa o que não é centavo inteiro", () => {
+    expect(() => formatCurrencyCompact(1.5)).toThrow(TypeError)
   })
 })

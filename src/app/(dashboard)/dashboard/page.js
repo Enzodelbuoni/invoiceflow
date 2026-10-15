@@ -1,108 +1,130 @@
 import Link from "next/link"
-import { CircleCheckIcon, FileTextIcon, PercentIcon, PlusIcon, SendIcon, WalletIcon } from "lucide-react"
+import { ClockIcon, FileTextIcon, PlusIcon, SendIcon, TrendingUpIcon, WalletIcon } from "lucide-react"
 
+import { ConversionCard } from "@/components/dashboard/conversion-card"
+import { KpiTile } from "@/components/dashboard/kpi-tile"
+import { PeriodFilter } from "@/components/dashboard/period-filter"
+import { StatusBreakdown } from "@/components/dashboard/status-breakdown"
 import { PageHeader } from "@/components/layout/page-header"
 import { EmptyState } from "@/components/shared/empty-state"
 import { Button } from "@/components/ui/button"
-import { formatLongDate, formatPercent } from "@/lib/format"
-import { formatCurrency } from "@/lib/money"
-import { cn } from "@/lib/utils"
+import { countLabel, describePeriod, parsePeriod, periodSince } from "@/lib/dashboard"
+import { getDashboard } from "@/lib/data/dashboard"
+import { formatLongDate } from "@/lib/format"
+import { formatCurrency, formatCurrencyCompact } from "@/lib/money"
 
 export const metadata = { title: "Dashboard" }
 
-// TODO(Sprint 18): calcular a partir dos orçamentos do usuário.
-const KPIS = [
-  {
-    label: "Orçamentos enviados",
-    value: "0",
-    hint: "Nos últimos 30 dias",
-    icon: SendIcon,
-    tone: "bg-status-sent/10 text-status-sent ring-status-sent/20",
-  },
-  {
-    label: "Aprovados",
-    value: "0",
-    hint: "Propostas aceitas pelo cliente",
-    icon: CircleCheckIcon,
-    tone: "bg-status-approved/10 text-status-approved ring-status-approved/20",
-  },
-  {
-    label: "Taxa de conversão",
-    value: formatPercent(0),
-    hint: "Aprovados ÷ enviados",
-    icon: PercentIcon,
-    tone: "bg-primary/10 text-primary-ink ring-primary/20",
-  },
-  {
-    label: "Valor aprovado",
-    value: formatCurrency(0),
-    hint: "Soma das propostas aprovadas",
-    icon: WalletIcon,
-    tone: "bg-success/10 text-success ring-success/20",
-  },
-]
-
-function KpiCard({ kpi, index }) {
-  const Icon = kpi.icon
-
+function NewQuoteButton() {
   return (
-    <div
-      className="relative flex animate-enter flex-col overflow-hidden rounded-xl border bg-card p-4 shadow-sm sm:p-5"
-      style={{ animationDelay: `${120 + index * 60}ms` }}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-xs font-medium text-muted-foreground sm:text-sm">{kpi.label}</p>
-        <span
-          aria-hidden="true"
-          className={cn("flex size-8 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset", kpi.tone)}
-        >
-          <Icon className="size-4" />
-        </span>
-      </div>
-      <p className="mt-4 font-display text-3xl leading-none tracking-tight sm:text-4xl">{kpi.value}</p>
-      <p className="mt-2 text-xs text-muted-foreground">{kpi.hint}</p>
-    </div>
+    <Button asChild size="lg" className="h-10 px-4">
+      <Link href="/quotes/new">
+        <PlusIcon data-icon="inline-start" />
+        Novo orçamento
+      </Link>
+    </Button>
   )
 }
 
-export default function DashboardPage() {
-  return (
-    <>
-      <PageHeader
-        eyebrow={formatLongDate(new Date())}
-        title="Visão geral"
-        description="Acompanhe suas propostas, aprovações e faturamento em um só lugar."
-        actions={
-          <Button asChild size="lg" className="h-10 px-4">
+/** Valor em destaque de um indicador: compacto a partir de R$ 1 milhão, com o exato à mão. */
+function money(cents) {
+  return { value: formatCurrencyCompact(cents), exactValue: formatCurrency(cents) }
+}
+
+/**
+ * Painel (Sprint 18): conversão, valores e propostas por situação no período
+ * escolhido (?periodo=30d|90d|12m|tudo). Os números vêm de uma função do banco
+ * (quote_dashboard); o período conta pela data de envio (o que nunca foi
+ * enviado, pela de criação).
+ */
+export default async function DashboardPage({ searchParams }) {
+  const { periodo } = await searchParams
+  const period = parsePeriod(periodo)
+  const periodText = describePeriod(period)
+
+  const metrics = await getDashboard(periodSince(period))
+  // Período vazio: ainda existe alguma proposta? (senão, o convite para a primeira)
+  const everything = metrics?.total === 0 && period.days !== null ? await getDashboard(null) : metrics
+
+  const header = (
+    <PageHeader
+      eyebrow={formatLongDate(new Date())}
+      title="Visão geral"
+      description="Acompanhe suas propostas, aprovações e faturamento em um só lugar."
+      actions={<NewQuoteButton />}
+    />
+  )
+
+  if (!everything || everything.total === 0) {
+    return (
+      <>
+        {header}
+        <EmptyState
+          icon={FileTextIcon}
+          title="Sua primeira proposta começa aqui"
+          description="Cadastre um cliente, adicione seus serviços e monte um orçamento profissional em poucos minutos. O cliente aprova online, direto pelo link."
+        >
+          <Button asChild>
             <Link href="/quotes/new">
               <PlusIcon data-icon="inline-start" />
-              Novo orçamento
+              Criar orçamento
             </Link>
           </Button>
-        }
-      />
+          <Button variant="outline" asChild>
+            <Link href="/clients">Ver clientes</Link>
+          </Button>
+        </EmptyState>
+      </>
+    )
+  }
 
-      <section aria-label="Indicadores" className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        {KPIS.map((kpi, index) => (
-          <KpiCard key={kpi.label} kpi={kpi} index={index} />
-        ))}
-      </section>
+  return (
+    <>
+      {header}
 
-      <EmptyState
-        icon={FileTextIcon}
-        title="Sua primeira proposta começa aqui"
-        description="Cadastre um cliente, adicione seus serviços e monte um orçamento profissional em poucos minutos. O cliente aprova online, direto pelo link."
-      >
-        <Button asChild>
-          <Link href="/quotes/new">
-            <PlusIcon data-icon="inline-start" />
-            Criar orçamento
-          </Link>
-        </Button>
-        <Button variant="outline" asChild>
-          <Link href="/clients">Ver clientes</Link>
-        </Button>
-      </EmptyState>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <PeriodFilter current={period.value} />
+        <p className="text-xs text-muted-foreground">Pela data de envio (rascunhos, pela de criação).</p>
+      </div>
+
+      <div className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
+        <ConversionCard metrics={metrics} periodText={periodText} />
+
+        <section aria-label="Indicadores" className="grid grid-cols-2 gap-3 sm:gap-4">
+          <KpiTile
+            label="Valor aprovado"
+            {...money(metrics.approvedValueCents)}
+            hint={countLabel(metrics.approved, "proposta aprovada", "propostas aprovadas")}
+            icon={WalletIcon}
+            tone="bg-success/10 text-success ring-success/20"
+          />
+          <KpiTile
+            label="Valor enviado"
+            {...money(metrics.reachedValueCents)}
+            hint={countLabel(metrics.reached, "proposta enviada", "propostas enviadas")}
+            icon={SendIcon}
+            tone="bg-status-sent/10 text-status-sent ring-status-sent/20"
+          />
+          <KpiTile
+            label="Aguardando resposta"
+            value={metrics.openCount.toLocaleString("pt-BR")}
+            hint={`${formatCurrency(metrics.openValueCents)} em propostas abertas`}
+            icon={ClockIcon}
+            tone="bg-status-viewed/10 text-status-viewed ring-status-viewed/20"
+          />
+          <KpiTile
+            label="Ticket médio"
+            {...(metrics.averageTicketCents === null
+              ? { value: "—" }
+              : money(metrics.averageTicketCents))}
+            hint="Por proposta aprovada"
+            icon={TrendingUpIcon}
+            tone="bg-primary/10 text-primary-ink ring-primary/20"
+          />
+        </section>
+      </div>
+
+      <StatusBreakdown byStatus={metrics.byStatus} total={metrics.total} periodText={periodText} />
     </>
   )
 }
