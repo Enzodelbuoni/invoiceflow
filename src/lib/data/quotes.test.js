@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { getDataContext } from "@/lib/data/shared"
+import { isSupabaseConfigured } from "@/lib/supabase/env"
 import {
   cancelQuote,
   deleteQuote,
@@ -8,6 +9,7 @@ import {
   getQuote,
   getQuoteDocument,
   insertQuote,
+  listQuotes,
   sendQuote,
   toCreateQuoteParams,
   updateQuote,
@@ -17,6 +19,7 @@ import {
 vi.mock("server-only", () => ({}))
 // O contexto (usuário + cliente Supabase) é trocado por um falso em cada teste.
 vi.mock("@/lib/data/shared", async (importOriginal) => ({ ...(await importOriginal()), getDataContext: vi.fn() }))
+vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: vi.fn(() => true) }))
 
 const CLIENT = "6f1c1d2e-0000-4000-8000-000000000001"
 const SERVICE = "6f1c1d2e-0000-4000-8000-000000000002"
@@ -298,6 +301,56 @@ describe("enviar e cancelar (máquina de estados)", () => {
     mockRpc(null)
     await expect(sendQuote("abc")).rejects.toMatchObject({ code: "not_found" })
     expect(rpc).not.toHaveBeenCalled()
+  })
+})
+
+describe("listQuotes", () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it("chama list_quotes com os filtros (busca vazia → null, data em ISO)", async () => {
+    const result = { counts: { draft: 1 }, total: 1, items: [] }
+    const rpc = vi.fn(async () => ({ data: result, error: null }))
+    getDataContext.mockResolvedValue({ user: { id: "u1" }, supabase: { rpc } })
+
+    await expect(listQuotes()).resolves.toBe(result)
+    expect(rpc).toHaveBeenLastCalledWith("list_quotes", {
+      p_query: null,
+      p_statuses: null,
+      p_since: null,
+      p_sort: "recent",
+      p_limit: 20,
+      p_offset: 0,
+    })
+
+    const since = new Date("2026-09-19T15:00:00Z")
+    await listQuotes({ query: "aurora", statuses: ["sent", "viewed"], since, sort: "value_desc", limit: 20, offset: 40 })
+    expect(rpc).toHaveBeenLastCalledWith("list_quotes", {
+      p_query: "aurora",
+      p_statuses: ["sent", "viewed"],
+      p_since: "2026-09-19T15:00:00.000Z",
+      p_sort: "value_desc",
+      p_limit: 20,
+      p_offset: 40,
+    })
+  })
+
+  it("modo demonstração → lista vazia, sem ir ao banco", async () => {
+    isSupabaseConfigured.mockReturnValueOnce(false)
+    getDataContext.mockClear()
+    await expect(listQuotes()).resolves.toEqual({
+      counts: { draft: 0, sent: 0, viewed: 0, approved: 0, declined: 0, expired: 0, cancelled: 0 },
+      total: 0,
+      items: [],
+    })
+    expect(getDataContext).not.toHaveBeenCalled()
+  })
+
+  it("erro do banco → mensagem amigável + log", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {})
+    const rpc = vi.fn(async () => ({ data: null, error: { code: "42883", message: "function does not exist" } }))
+    getDataContext.mockResolvedValue({ user: { id: "u1" }, supabase: { rpc } })
+    await expect(listQuotes()).rejects.toMatchObject({ code: "query_failed", message: "Não foi possível carregar os orçamentos." })
+    expect(log).toHaveBeenCalledOnce()
   })
 })
 

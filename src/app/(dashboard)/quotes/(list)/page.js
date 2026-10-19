@@ -1,15 +1,35 @@
 import Link from "next/link"
-import { ArrowRightIcon, FileTextIcon, PlusIcon } from "lucide-react"
+import { redirect } from "next/navigation"
+import { ArrowRightIcon, FileTextIcon, PlusIcon, SearchXIcon, XIcon } from "lucide-react"
 
 import { PageHeader } from "@/components/layout/page-header"
+import { QuoteListControls } from "@/components/quotes/quote-list-controls"
+import { QuoteListPagination } from "@/components/quotes/quote-list-pagination"
+import { QuoteListResults } from "@/components/quotes/quote-list-results"
+import { QuoteStatusTabs } from "@/components/quotes/quote-status-tabs"
 import { EmptyState } from "@/components/shared/empty-state"
+import { SearchInput } from "@/components/shared/search-input"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { QUOTE_STATUS_DESCRIPTIONS } from "@/lib/constants/quote-status"
+import { countLabel } from "@/lib/dashboard"
 import { listQuotes } from "@/lib/data/quotes"
-import { formatIsoDateShort } from "@/lib/dates"
-import { formatCurrency } from "@/lib/money"
+import { todayIso } from "@/lib/dates"
+import {
+  QUOTE_LIST_PERIODS,
+  QUOTE_SORTS,
+  QUOTE_STATUS_FILTERS,
+  clearFiltersHref,
+  emptyResultTitle,
+  isFiltered,
+  pageCount,
+  pageRange,
+  paginationItems,
+  parseQuoteListParams,
+  quoteListHref,
+  quoteListQuery,
+  statusFilterCount,
+} from "@/lib/quote-list"
 
 export const metadata = { title: "Orçamentos" }
 
@@ -71,107 +91,56 @@ function StatusLifecycle() {
   )
 }
 
-/** Título do orçamento: link para o documento que cobre a linha/cartão inteiro. */
-function QuoteTitle({ quote }) {
+/** "8 orçamentos" / "Mostrando 21–40 de 57 resultados para “aurora”". */
+function resultsSummary(params, total) {
+  const noun = params.query ? ["resultado", "resultados"] : ["orçamento", "orçamentos"]
+  const suffix = params.query ? ` para “${params.query}”` : ""
+  if (pageCount(total) === 1) return `${countLabel(total, ...noun)}${suffix}`
+  const { from, to } = pageRange(params.page, total)
+  return `Mostrando ${from}–${to} de ${countLabel(total, ...noun)}${suffix}`
+}
+
+function ClearFiltersLink({ params, className }) {
   return (
-    <Link
-      href={`/quotes/${quote.id}`}
-      className="truncate font-medium outline-none after:absolute after:inset-0 after:rounded-[inherit] hover:underline focus-visible:underline"
-    >
-      {quote.title}
-    </Link>
+    <Button asChild variant="ghost" size="sm" className={className}>
+      <Link href={clearFiltersHref(params)} replace scroll={false}>
+        <XIcon data-icon="inline-start" />
+        Limpar filtros
+      </Link>
+    </Button>
   )
 }
 
-function QuoteNumber({ quote }) {
-  return <span className="font-mono text-xs text-muted-foreground">Nº {quote.quote_number}</span>
-}
-
-/** Cliente do orçamento; `client` vem do join e pode faltar se a leitura dele falhar no RLS. */
-function ClientName({ client }) {
-  if (!client) return <span className="text-muted-foreground">—</span>
+/** Nenhum orçamento com os filtros atuais (o usuário tem outros). */
+function NoResults({ params }) {
   return (
-    <div className="flex min-w-0 flex-col">
-      <span className="truncate">{client.name}</span>
-      {client.company && <span className="truncate text-xs text-muted-foreground">{client.company}</span>}
+    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed px-6 py-14 text-center">
+      <SearchXIcon aria-hidden="true" className="size-6 text-muted-foreground" />
+      <p className="font-medium text-balance">{emptyResultTitle(params)}</p>
+      <p className="text-sm text-muted-foreground">
+        {params.query ? "Tente outro número, título ou cliente, ou mude os filtros." : "Mude os filtros para ver outros orçamentos."}
+      </p>
+      <ClearFiltersLink params={params} className="mt-2" />
     </div>
   )
 }
 
-function QuotesTable({ quotes }) {
-  return (
-    <div className="hidden overflow-hidden rounded-xl border bg-card shadow-sm md:block">
-      <Table>
-        <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            <TableHead className="pl-5">Orçamento</TableHead>
-            <TableHead>Cliente</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Validade</TableHead>
-            <TableHead className="pr-5 text-right">Total</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {quotes.map((quote) => (
-            <TableRow key={quote.id} className="relative">
-              <TableCell className="max-w-80 py-3 pl-5">
-                <div className="flex min-w-0 flex-col gap-0.5">
-                  <QuoteTitle quote={quote} />
-                  <QuoteNumber quote={quote} />
-                </div>
-              </TableCell>
-              <TableCell className="max-w-56 text-sm">
-                <ClientName client={quote.client} />
-              </TableCell>
-              <TableCell>
-                <StatusBadge status={quote.status} size="sm" />
-              </TableCell>
-              <TableCell className="text-sm text-muted-foreground">{formatIsoDateShort(quote.valid_until)}</TableCell>
-              <TableCell className="pr-5 text-right font-medium tabular-nums">{formatCurrency(quote.total_cents)}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  )
-}
+export default async function QuotesPage({ searchParams }) {
+  const params = parseQuoteListParams(await searchParams)
+  const { counts, total, items } = await listQuotes(quoteListQuery(params))
 
-// No celular a tabela vira uma lista de cartões.
-function QuotesCards({ quotes }) {
-  return (
-    <ul className="flex flex-col gap-3 md:hidden">
-      {quotes.map((quote) => (
-        <li key={quote.id} className="relative flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <QuoteTitle quote={quote} />
-              <QuoteNumber quote={quote} />
-            </div>
-            <StatusBadge status={quote.status} size="sm" className="shrink-0" />
-          </div>
-          <div className="flex items-end justify-between gap-3 text-sm">
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <ClientName client={quote.client} />
-              <span className="text-xs text-muted-foreground">Válido até {formatIsoDateShort(quote.valid_until)}</span>
-            </div>
-            <span className="shrink-0 font-display text-xl leading-none tabular-nums">
-              {formatCurrency(quote.total_cents)}
-            </span>
-          </div>
-        </li>
-      ))}
-    </ul>
-  )
-}
+  // Página que não existe mais (ex.: depois de excluir) → a última que existe.
+  const pages = pageCount(total)
+  if (params.page > pages) redirect(quoteListHref(params, { page: pages }))
 
-export default async function QuotesPage() {
-  const quotes = await listQuotes()
+  const header = <PageHeader title="Orçamentos" description={DESCRIPTION} actions={<NewQuoteButton />} />
 
-  // Nenhum orçamento ainda: estado vazio + explicação do ciclo de status.
-  if (quotes.length === 0) {
+  // Nenhum orçamento ainda (as contagens ignoram o status; sem busca e sem
+  // período, elas são tudo o que o usuário tem): estado vazio + ciclo de status.
+  if (!params.query && params.period === QUOTE_LIST_PERIODS[0].value && statusFilterCount(QUOTE_STATUS_FILTERS[0], counts) === 0) {
     return (
       <>
-        <PageHeader title="Orçamentos" description={DESCRIPTION} actions={<NewQuoteButton />} />
+        {header}
         <EmptyState
           icon={FileTextIcon}
           title="Nenhum orçamento ainda"
@@ -189,16 +158,55 @@ export default async function QuotesPage() {
     )
   }
 
+  // Links prontos para cada aba/opção, com os outros filtros mantidos.
+  const tabs = QUOTE_STATUS_FILTERS.map((filter) => ({
+    value: filter.value,
+    label: filter.label,
+    description: filter.description,
+    count: statusFilterCount(filter, counts),
+    href: quoteListHref(params, { status: filter.value }),
+  }))
+  const optionsWithHref = (options, key) =>
+    options.map((option) => ({ value: option.value, label: option.label, href: quoteListHref(params, { [key]: option.value }) }))
+  const pagination = {
+    page: params.page,
+    pages,
+    items: paginationItems(params.page, pages).map((item) =>
+      typeof item === "number" ? { key: `p${item}`, page: item, href: quoteListHref(params, { page: item }) } : { key: item },
+    ),
+    previousHref: params.page > 1 ? quoteListHref(params, { page: params.page - 1 }) : null,
+    nextHref: params.page < pages ? quoteListHref(params, { page: params.page + 1 }) : null,
+  }
+
   return (
     <>
-      <PageHeader title="Orçamentos" description={DESCRIPTION} actions={<NewQuoteButton />} />
+      {header}
 
       <div className="flex flex-col gap-4">
-        <p className="text-sm text-muted-foreground">
-          {quotes.length} {quotes.length === 1 ? "orçamento" : "orçamentos"}
-        </p>
-        <QuotesTable quotes={quotes} />
-        <QuotesCards quotes={quotes} />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <SearchInput
+            initialQuery={params.query}
+            label="Buscar orçamentos"
+            placeholder="Buscar por número, título ou cliente"
+          />
+          <QuoteListControls
+            period={{ value: params.period, options: optionsWithHref(QUOTE_LIST_PERIODS, "period") }}
+            sort={{ value: params.sort, options: optionsWithHref(QUOTE_SORTS, "sort") }}
+          />
+        </div>
+
+        <QuoteStatusTabs tabs={tabs} current={params.status} />
+
+        <div className="flex min-h-8 flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <p className="text-sm text-muted-foreground" aria-live="polite">
+            {resultsSummary(params, total)}
+          </p>
+          {isFiltered(params) && total > 0 && <ClearFiltersLink params={params} className="-mr-2" />}
+        </div>
+
+        {items.length === 0 ? <NoResults params={params} /> : <QuoteListResults quotes={items} today={todayIso()} />}
+
+        {pages > 1 && <QuoteListPagination {...pagination} />}
       </div>
     </>
   )

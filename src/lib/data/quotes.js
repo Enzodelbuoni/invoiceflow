@@ -5,15 +5,13 @@ import { calculateQuoteTotals } from "@/lib/calculations/quote"
 import { DataError, databaseError, getDataContext, isUuid } from "@/lib/data/shared"
 import { todayIso } from "@/lib/dates"
 import { toQuoteCopy } from "@/lib/quote-copy"
+import { EMPTY_STATUS_COUNTS } from "@/lib/quote-list"
 import { isSupabaseConfigured } from "@/lib/supabase/env"
 
 // Camada de acesso a dados dos orçamentos (peças comuns em ./shared.js).
 // Valores em inteiros como no banco: centavos, quantidade em centésimos e
 // percentuais em pontos-base. Os bigint chegam como number: o teto
 // (R$ 999.999.999,99) fica muito abaixo de Number.MAX_SAFE_INTEGER.
-
-const LIST_COLUMNS =
-  "id, quote_number, title, status, total_cents, valid_until, created_at, client:clients(id, name, company)"
 
 const QUOTE_COLUMNS = [
   "id, quote_number, status, client_id, title, description, valid_until",
@@ -171,15 +169,31 @@ export const getQuoteDocument = cache(async (id) => {
   }
 })
 
-/** Orçamentos do usuário, mais recentes primeiro, com o nome do cliente. */
-export async function listQuotes() {
-  if (!isSupabaseConfigured()) return []
-  const { user, supabase } = await getDataContext()
-  const { data, error } = await supabase
-    .from("quotes")
-    .select(LIST_COLUMNS)
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
+/**
+ * Lista de orçamentos (Sprint 19) pela função list_quotes do banco: busca sem
+ * acentos (número, título, cliente), status, período, ordenação e página numa
+ * consulta só (argumentos montados por quoteListQuery, em lib/quote-list.js).
+ * Modo demonstração → lista vazia.
+ * @param {{ query?: string, statuses?: string[] | null, since?: Date | null, sort?: string,
+ *   limit?: number, offset?: number }} [options]
+ * @returns {Promise<{ counts: Record<string, number>, total: number, items: Array<{ id: string,
+ *   public_id: string, quote_number: string, title: string, status: string, total_cents: number,
+ *   valid_until: string, created_at: string, sent_at: string | null,
+ *   client: { id: string, name: string, company: string | null } }> }>}
+ *   `counts`: por status, com a busca e o período (sem o filtro de status);
+ *   `total`: resultados com todos os filtros (para a paginação).
+ */
+export async function listQuotes({ query = "", statuses = null, since = null, sort = "recent", limit = 20, offset = 0 } = {}) {
+  if (!isSupabaseConfigured()) return { counts: { ...EMPTY_STATUS_COUNTS }, total: 0, items: [] }
+  const { supabase } = await getDataContext()
+  const { data, error } = await supabase.rpc("list_quotes", {
+    p_query: query || null,
+    p_statuses: statuses,
+    p_since: since ? since.toISOString() : null,
+    p_sort: sort,
+    p_limit: limit,
+    p_offset: offset,
+  })
   if (error) throw databaseError("quotes", "query_failed", "Não foi possível carregar os orçamentos.", error)
   return data
 }
