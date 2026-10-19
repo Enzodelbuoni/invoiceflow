@@ -1,5 +1,6 @@
 import Link from "next/link"
 
+import { QuoteRowActions } from "@/components/quotes/quote-row-actions"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatIsoDateShort } from "@/lib/dates"
@@ -51,7 +52,7 @@ function ValidityHint({ quote, today, className }) {
   return <span className={cn("text-xs", HINT_TONES[hint.tone], className)}>{hint.text}</span>
 }
 
-function QuotesTable({ quotes, today }) {
+function QuotesTable({ quotes, today, pdfAvailable }) {
   return (
     <div className="hidden overflow-hidden rounded-xl border bg-card shadow-sm @2xl:block">
       <Table>
@@ -62,7 +63,10 @@ function QuotesTable({ quotes, today }) {
             <TableHead>Status</TableHead>
             <TableHead className="hidden @4xl:table-cell">Data</TableHead>
             <TableHead>Validade</TableHead>
-            <TableHead className="pr-5 text-right">Total</TableHead>
+            <TableHead className="text-right">Total</TableHead>
+            <TableHead className="w-12 pr-3">
+              <span className="sr-only">Ações</span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -100,7 +104,16 @@ function QuotesTable({ quotes, today }) {
                     <ValidityHint quote={quote} today={today} />
                   </div>
                 </TableCell>
-                <TableCell className="pr-5 text-right font-medium tabular-nums">{formatCurrency(quote.total_cents)}</TableCell>
+                <TableCell className="text-right font-medium tabular-nums">{formatCurrency(quote.total_cents)}</TableCell>
+                <TableCell className="relative z-10 pr-3 text-right">
+                  <QuoteRowActions
+                    quote={quote}
+                    client={quote.client}
+                    today={today}
+                    pdfAvailable={pdfAvailable}
+                    triggerId={`quote-row-actions-${quote.id}`}
+                  />
+                </TableCell>
               </TableRow>
             )
           })}
@@ -111,7 +124,7 @@ function QuotesTable({ quotes, today }) {
 }
 
 // Lista estreita (celular, ou sidebar aberta numa tela média): cartões.
-function QuotesCards({ quotes, today }) {
+function QuotesCards({ quotes, today, pdfAvailable }) {
   return (
     <ul className="flex flex-col gap-3 @2xl:hidden">
       {quotes.map((quote) => {
@@ -123,7 +136,18 @@ function QuotesCards({ quotes, today }) {
                 <QuoteTitle quote={quote} />
                 <QuoteNumber quote={quote} />
               </div>
-              <StatusBadge status={quote.status} size="sm" className="shrink-0" />
+              <div className="flex shrink-0 items-center gap-1">
+                <StatusBadge status={quote.status} size="sm" />
+                <div className="relative z-10 -my-1 -mr-2">
+                  <QuoteRowActions
+                    quote={quote}
+                    client={quote.client}
+                    today={today}
+                    pdfAvailable={pdfAvailable}
+                    triggerId={`quote-card-actions-${quote.id}`}
+                  />
+                </div>
+              </div>
             </div>
             <div className="flex items-end justify-between gap-3 text-sm">
               <div className="flex min-w-0 flex-col gap-0.5">
@@ -149,14 +173,17 @@ function QuotesCards({ quotes, today }) {
 
 /**
  * Orçamentos da página atual: tabela quando a lista é larga, cartões quando é
- * estreita. O título de cada um é um link que cobre a linha/cartão inteiro.
- * @param {{ quotes: Array<object>, today: string }} props `today`: "AAAA-MM-DD" (SP), para "vence em…".
+ * estreita. O título de cada um é um link que cobre a linha/cartão inteiro; o
+ * menu "⋯" (QuoteRowActions) fica por cima dele.
+ * @param {{ quotes: Array<object>, today: string, pdfAvailable?: boolean }} props
+ *   `today`: "AAAA-MM-DD" (SP), para "vence em…" e para a confirmação de envio;
+ *   `pdfAvailable`: o servidor gera PDF (senão, o menu não oferece "Baixar PDF").
  */
-export function QuoteListResults({ quotes, today }) {
+export function QuoteListResults({ quotes, today, pdfAvailable = false }) {
   return (
     <div className="@container">
-      <QuotesTable quotes={quotes} today={today} />
-      <QuotesCards quotes={quotes} today={today} />
+      <QuotesTable quotes={quotes} today={today} pdfAvailable={pdfAvailable} />
+      <QuotesCards quotes={quotes} today={today} pdfAvailable={pdfAvailable} />
     </div>
   )
 }

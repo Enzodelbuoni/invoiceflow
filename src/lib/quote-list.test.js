@@ -98,6 +98,11 @@ describe("quoteListHref", () => {
     expect(quoteListHref({ ...DEFAULT_PARAMS, page: 5 }, { page: 1 })).toBe("/quotes")
   })
 
+  it("link do painel: a lista no mesmo período", () => {
+    expect(quoteListHref(parseQuoteListParams(), { period: "12m" })).toBe("/quotes?periodo=12m")
+    expect(quoteListHref(parseQuoteListParams(), { period: "tudo" })).toBe("/quotes")
+  })
+
   it("ida e volta pela URL", () => {
     const params = { query: "aurora", status: "em-aberto", period: "90d", sort: "menor-valor", page: 2 }
     const search = new URLSearchParams(quoteListHref(params, { page: 2 }).split("?")[1])

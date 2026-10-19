@@ -15,6 +15,7 @@ import { QUOTE_STATUS_DESCRIPTIONS } from "@/lib/constants/quote-status"
 import { countLabel } from "@/lib/dashboard"
 import { listQuotes } from "@/lib/data/quotes"
 import { todayIso } from "@/lib/dates"
+import { isPdfAvailable } from "@/lib/pdf/render"
 import {
   QUOTE_LIST_PERIODS,
   QUOTE_SORTS,
@@ -198,13 +199,18 @@ export default async function QuotesPage({ searchParams }) {
         <QuoteStatusTabs tabs={tabs} current={params.status} />
 
         <div className="flex min-h-8 flex-wrap items-center justify-between gap-x-3 gap-y-1">
-          <p className="text-sm text-muted-foreground" aria-live="polite">
+          {/* tabIndex -1: recebe o foco quando a linha de onde ele veio some (orçamento excluído). */}
+          <p id="quotes-summary" tabIndex={-1} className="text-sm text-muted-foreground outline-none" aria-live="polite">
             {resultsSummary(params, total)}
           </p>
           {isFiltered(params) && total > 0 && <ClearFiltersLink params={params} className="-mr-2" />}
         </div>
 
-        {items.length === 0 ? <NoResults params={params} /> : <QuoteListResults quotes={items} today={todayIso()} />}
+        {items.length === 0 ? (
+          <NoResults params={params} />
+        ) : (
+          <QuoteListResults quotes={items} today={todayIso()} pdfAvailable={isPdfAvailable()} />
+        )}
 
         {pages > 1 && <QuoteListPagination {...pagination} />}
       </div>

@@ -1,3 +1,6 @@
+import Link from "next/link"
+import { ArrowRightIcon } from "lucide-react"
+
 import { StatusBadge } from "@/components/shared/status-badge"
 import { QUOTE_STATUS_VALUES } from "@/lib/constants/quote-status"
 import { countLabel } from "@/lib/dashboard"
@@ -19,9 +22,10 @@ const BAR_CLASSES = {
 /**
  * Propostas por situação no período: selo do status, barra com a parte do
  * total e o número (com o percentual). É uma lista legível sem as barras.
- * @param {{ byStatus: Record<string, number>, total: number, periodText: string, className?: string }} props
+ * @param {{ byStatus: Record<string, number>, total: number, periodText: string, listHref?: string,
+ *   className?: string }} props `listHref`: a lista de orçamentos no mesmo período (as mesmas contagens).
  */
-export function StatusBreakdown({ byStatus, total, periodText, className }) {
+export function StatusBreakdown({ byStatus, total, periodText, listHref, className }) {
   return (
     <section
       aria-labelledby="status-breakdown-title"
@@ -57,6 +61,16 @@ export function StatusBreakdown({ byStatus, total, periodText, className }) {
           )
         })}
       </ul>
+
+      {listHref && (
+        <Link
+          href={listHref}
+          className="group mt-auto inline-flex items-center gap-1.5 self-start rounded-md text-sm font-medium text-primary-ink outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          Ver na lista de orçamentos
+          <ArrowRightIcon aria-hidden="true" className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      )}
     </section>
   )
 }

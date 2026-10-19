@@ -15,6 +15,7 @@ import { buildSendSeries } from "@/lib/dashboard-series"
 import { getDashboard, getSendSeries, listRecentActivity } from "@/lib/data/dashboard"
 import { formatLongDate } from "@/lib/format"
 import { formatCurrency, formatCurrencyCompact } from "@/lib/money"
+import { parseQuoteListParams, quoteListHref } from "@/lib/quote-list"
 
 export const metadata = { title: "Dashboard" }
 
@@ -137,7 +138,12 @@ export default async function DashboardPage({ searchParams }) {
       <SendsChart series={buildSendSeries(sends, { period, now })} periodText={periodText} />
 
       <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
-        <StatusBreakdown byStatus={metrics.byStatus} total={metrics.total} periodText={periodText} />
+        <StatusBreakdown
+          byStatus={metrics.byStatus}
+          total={metrics.total}
+          periodText={periodText}
+          listHref={quoteListHref(parseQuoteListParams(), { period: period.value })}
+        />
         {/* Fora do período de propósito: o subtítulo do cartão avisa. */}
         <RecentActivity items={activity} />
       </div>

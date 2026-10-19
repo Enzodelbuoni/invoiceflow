@@ -10,7 +10,7 @@ import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog"
  * o diálogo continua aberto e mostra a mensagem; em caso de sucesso, fecha e
  * chama `onDeleted()` (toast, redirecionamento…).
  */
-export function ConfirmDeleteDialog({ open, onOpenChange, title, description, confirmLabel, action, onDeleted }) {
+export function ConfirmDeleteDialog({ open, onOpenChange, title, description, confirmLabel, action, onDeleted, onCloseAutoFocus }) {
   return (
     <ConfirmActionDialog
       open={open}
@@ -23,6 +23,7 @@ export function ConfirmDeleteDialog({ open, onOpenChange, title, description, co
       variant="destructive"
       action={action}
       onDone={onDeleted}
+      onCloseAutoFocus={onCloseAutoFocus}
     />
   )
 }

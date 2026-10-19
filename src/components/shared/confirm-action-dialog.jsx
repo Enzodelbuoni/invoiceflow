@@ -23,8 +23,10 @@ import { Spinner } from "@/components/ui/spinner"
  *   description: React.ReactNode, children?: React.ReactNode,
  *   confirmLabel: string, pendingLabel: string, icon?: React.ReactNode,
  *   variant?: "default" | "destructive", cancelLabel?: string,
- *   action: () => Promise<{ ok: boolean, message?: string }>, onDone?: () => void }} props
+ *   action: () => Promise<{ ok: boolean, message?: string }>, onDone?: () => void,
+ *   onCloseAutoFocus?: (event: Event) => void }} props
  *   `children`: conteúdo extra entre a descrição e os botões (ex.: um resumo).
+ *   `onCloseAutoFocus`: para onde o foco vai ao fechar (o diálogo não tem gatilho próprio).
  */
 export function ConfirmActionDialog({
   open,
@@ -39,6 +41,7 @@ export function ConfirmActionDialog({
   cancelLabel = "Cancelar",
   action,
   onDone,
+  onCloseAutoFocus,
 }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState(null)
@@ -69,7 +72,7 @@ export function ConfirmActionDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent onCloseAutoFocus={onCloseAutoFocus}>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>

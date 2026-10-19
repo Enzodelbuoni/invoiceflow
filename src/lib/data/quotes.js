@@ -179,7 +179,7 @@ export const getQuoteDocument = cache(async (id) => {
  * @returns {Promise<{ counts: Record<string, number>, total: number, items: Array<{ id: string,
  *   public_id: string, quote_number: string, title: string, status: string, total_cents: number,
  *   valid_until: string, created_at: string, sent_at: string | null,
- *   client: { id: string, name: string, company: string | null } }> }>}
+ *   client: { id: string, name: string, company: string | null, email: string | null, phone: string | null } }> }>}
  *   `counts`: por status, com a busca e o período (sem o filtro de status);
  *   `total`: resultados com todos os filtros (para a paginação).
  */

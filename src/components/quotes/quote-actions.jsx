@@ -15,14 +15,9 @@ import {
   SendIcon,
   Share2Icon,
   Trash2Icon,
-  TriangleAlertIcon,
 } from "lucide-react"
-import { toast } from "sonner"
 
-import { cancelQuoteAction, deleteQuoteAction, sendQuoteAction } from "@/actions/quotes"
-import { ShareQuoteDialog } from "@/components/quotes/share-quote-dialog"
-import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog"
-import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog"
+import { QuoteActionDialogs, copyQuoteLink, downloadQuotePdf } from "@/components/quotes/quote-action-dialogs"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -32,61 +27,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useDuplicateQuote } from "@/hooks/use-duplicate-quote"
-import { formatIsoDateShort } from "@/lib/dates"
-import { formatCurrency } from "@/lib/money"
-import { pdfFileName, quotePdfUrl } from "@/lib/pdf/document"
-import { downloadPdf } from "@/lib/pdf-download"
-import { publicQuoteUrl } from "@/lib/share"
-
-/** Copia o link da proposta, com aviso (e o link no aviso, se a cópia falhar). */
-async function copyQuoteLink(quote) {
-  const url = publicQuoteUrl(quote.public_id, window.location.origin)
-  try {
-    await navigator.clipboard.writeText(url)
-    toast.success("Link copiado", { description: "Cole na conversa com o cliente. Ele abre sem precisar de conta." })
-  } catch {
-    toast.info("Copie o link da proposta", { description: url, duration: 15000 })
-  }
-}
-
-/** Baixa o PDF gerado no servidor, com o andamento num aviso ("Gerando PDF…"). */
-function downloadQuotePdf(quote) {
-  toast.promise(downloadPdf(quotePdfUrl(quote.public_id), pdfFileName(quote.quote_number)), {
-    loading: "Gerando PDF…",
-    success: `PDF da proposta ${quote.quote_number} pronto`,
-    error: (error) => ({ message: "Não foi possível baixar o PDF", description: error.message }),
-  })
-}
-
-/** Resumo do que vai ser enviado, dentro da confirmação. */
-function SendSummary({ quote, clientName, validityPassed }) {
-  return (
-    <div className="flex flex-col gap-3">
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 rounded-lg border bg-muted/40 p-3.5 text-sm">
-        <dt className="text-muted-foreground">Cliente</dt>
-        <dd className="truncate font-medium">{clientName ?? "—"}</dd>
-        <dt className="text-muted-foreground">Total</dt>
-        <dd className="font-medium tabular-nums">{formatCurrency(quote.total_cents)}</dd>
-        <dt className="text-muted-foreground">Válida até</dt>
-        <dd className={validityPassed ? "font-medium text-destructive" : undefined}>
-          {formatIsoDateShort(quote.valid_until)}
-        </dd>
-      </dl>
-      {validityPassed && (
-        <p className="flex items-start gap-2 text-sm text-destructive">
-          <TriangleAlertIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          <span>
-            A validade já passou.{" "}
-            <Link href={`/quotes/${quote.id}/edit`} className="font-medium underline underline-offset-2">
-              Edite a data
-            </Link>{" "}
-            antes de enviar.
-          </span>
-        </p>
-      )}
-    </div>
-  )
-}
 
 /**
  * Ações da página do orçamento, conforme o status (máquina de estados do
@@ -96,7 +36,8 @@ function SendSummary({ quote, clientName, validityPassed }) {
  * qualquer status → duplicar como novo rascunho (Sprint 13) e imprimir; com
  * documento público (nem rascunho nem cancelada) → baixar o PDF (Sprint 16).
  * Cada mudança de status passa por uma confirmação e por uma função do banco
- * que confere o status de novo.
+ * que confere o status de novo. Os diálogos são os mesmos da lista
+ * (QuoteActionDialogs).
  * @param {{ quote: { id: string, public_id: string, quote_number: string, status: string, title: string,
  *     total_cents: number, valid_until: string },
  *   client: { name: string, phone?: string|null, email?: string|null } | null,
@@ -110,10 +51,8 @@ export function QuoteActions({ quote, client, today, pdfAvailable = false }) {
   const { duplicate, pending: duplicating } = useDuplicateQuote()
   const isDraft = quote.status === "draft"
   const isOpen = quote.status === "sent" || quote.status === "viewed"
-  const validityPassed = quote.valid_until < today
   // O PDF sai da página pública: rascunho e cancelada não têm uma.
   const canDownloadPdf = pdfAvailable && !isDraft && quote.status !== "cancelled"
-  const close = (open) => !open && setDialog(null)
 
   return (
     <>
@@ -191,65 +130,15 @@ export function QuoteActions({ quote, client, today, pdfAvailable = false }) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <ConfirmActionDialog
-        open={dialog === "send"}
-        onOpenChange={close}
-        title={`Enviar o orçamento ${quote.quote_number}?`}
-        description="Depois de enviado, o documento fica travado: itens, preços, cliente e condições não mudam mais. Para corrigir algo depois, cancele e duplique como novo rascunho."
-        confirmLabel="Enviar orçamento"
-        pendingLabel="Enviando…"
-        icon={<SendIcon data-icon="inline-start" />}
-        action={() => sendQuoteAction(quote.id)}
-        onDone={() => {
-          toast.success("Orçamento enviado", { description: `Orçamento ${quote.quote_number}` })
-          // Enviar só trava o documento: o próximo passo é mandar o link ao cliente.
-          setDialog("share-sent")
-        }}
-      >
-        <SendSummary quote={quote} clientName={client?.name ?? null} validityPassed={validityPassed} />
-      </ConfirmActionDialog>
-
-      <ShareQuoteDialog
-        open={dialog === "share" || dialog === "share-sent"}
-        onOpenChange={close}
+      <QuoteActionDialogs
         quote={quote}
         client={client}
-        justSent={dialog === "share-sent"}
-        onCloseAutoFocus={(event) => {
-          // O diálogo não tem gatilho próprio (abre também depois do envio): o foco volta ao "Compartilhar".
-          const trigger = document.getElementById("quote-share-trigger")
-          if (trigger) {
-            event.preventDefault()
-            trigger.focus()
-          }
-        }}
-      />
-
-      <ConfirmActionDialog
-        open={dialog === "cancel"}
-        onOpenChange={close}
-        title={`Cancelar a proposta ${quote.quote_number}?`}
-        description="O cliente não poderá mais aprovar. O orçamento continua no seu histórico, marcado como cancelado."
-        confirmLabel="Cancelar proposta"
-        cancelLabel="Voltar"
-        pendingLabel="Cancelando…"
-        icon={<BanIcon data-icon="inline-start" />}
-        variant="destructive"
-        action={() => cancelQuoteAction(quote.id)}
-        onDone={() => toast.success("Proposta cancelada", { description: `Orçamento ${quote.quote_number}` })}
-      />
-
-      <ConfirmDeleteDialog
-        open={dialog === "delete"}
-        onOpenChange={close}
-        title={`Excluir o rascunho ${quote.quote_number}?`}
-        description="O rascunho e o histórico dele são apagados. Isso não pode ser desfeito."
-        confirmLabel="Excluir rascunho"
-        action={() => deleteQuoteAction(quote.id)}
-        onDeleted={() => {
-          toast.success("Rascunho excluído", { description: `Orçamento ${quote.quote_number}` })
-          router.push("/quotes")
-        }}
+        today={today}
+        dialog={dialog}
+        onDialogChange={setDialog}
+        onDeleted={() => router.push("/quotes")}
+        // O "Compartilhar" também abre sem gatilho (depois do envio): o foco volta ao botão dele.
+        returnFocus={{ share: "quote-share-trigger" }}
       />
     </>
   )
