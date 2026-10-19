@@ -30,7 +30,7 @@ function ClientLink({ client }) {
   return (
     <Link
       href={`/clients/${client.id}`}
-      className="font-medium outline-none after:absolute after:inset-0 after:rounded-[inherit] hover:underline focus-visible:underline"
+      className="truncate font-medium outline-none after:absolute after:inset-0 after:rounded-[inherit] hover:underline focus-visible:underline"
     >
       {client.name}
     </Link>
@@ -47,16 +47,19 @@ function ContactInfo({ client }) {
   )
 }
 
+// Tabela quando a lista é larga, cartões quando é estreita (container query:
+// acompanha a sidebar). Layout fixo para nomes e e-mails longos serem cortados
+// com reticências em vez de alargar a tabela.
 function ClientsTable({ clients }) {
   return (
-    <div className="hidden overflow-hidden rounded-xl border bg-card shadow-sm md:block">
-      <Table>
+    <div className="hidden overflow-hidden rounded-xl border bg-card shadow-sm @3xl:block">
+      <Table className="table-fixed">
         <TableHeader>
           <TableRow className="hover:bg-transparent">
             <TableHead className="pl-5">Cliente</TableHead>
-            <TableHead>Contato</TableHead>
-            <TableHead>CPF / CNPJ</TableHead>
-            <TableHead>Cadastrado em</TableHead>
+            <TableHead className="w-[32%]">Contato</TableHead>
+            <TableHead className="w-44">CPF / CNPJ</TableHead>
+            <TableHead className="hidden w-36 @4xl:table-cell">Cadastrado em</TableHead>
             <TableHead className="w-12 pr-5">
               <span className="sr-only">Ações</span>
             </TableHead>
@@ -74,13 +77,15 @@ function ClientsTable({ clients }) {
                   </div>
                 </div>
               </TableCell>
-              <TableCell className="max-w-64">
+              <TableCell>
                 <ContactInfo client={client} />
               </TableCell>
               <TableCell className="text-sm text-muted-foreground tabular-nums">
                 {client.document ? formatDocument(client.document) : "—"}
               </TableCell>
-              <TableCell className="text-sm text-muted-foreground">{formatShortDate(client.created_at)}</TableCell>
+              <TableCell className="hidden text-sm text-muted-foreground @4xl:table-cell">
+                {formatShortDate(client.created_at)}
+              </TableCell>
               <TableCell className="relative z-10 pr-5 text-right">
                 <ClientRowActions client={client} />
               </TableCell>
@@ -95,7 +100,7 @@ function ClientsTable({ clients }) {
 // No celular a tabela vira uma lista de cartões.
 function ClientsCards({ clients }) {
   return (
-    <ul className="flex flex-col gap-3 md:hidden">
+    <ul className="flex flex-col gap-3 @3xl:hidden">
       {clients.map((client) => (
         <li key={client.id} className="relative flex items-start gap-3 rounded-xl border bg-card p-4 shadow-sm">
           <ClientAvatar name={client.name} />
@@ -117,7 +122,7 @@ function ClientsCards({ clients }) {
               )}
             </div>
           </div>
-          <div className="relative z-10 -mt-1 -mr-1">
+          <div className="relative z-10 -mt-1 -mr-1 max-md:-mt-2.5 max-md:-mr-2.5">
             <ClientRowActions client={client} />
           </div>
         </li>
@@ -177,10 +182,10 @@ export default async function ClientsPage({ searchParams }) {
             <p className="text-sm text-muted-foreground">Tente outro nome, empresa ou e-mail.</p>
           </div>
         ) : (
-          <>
+          <div className="@container">
             <ClientsTable clients={clients} />
             <ClientsCards clients={clients} />
-          </>
+          </div>
         )}
       </div>
     </>

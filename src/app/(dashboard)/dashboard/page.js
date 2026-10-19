@@ -98,7 +98,8 @@ export default async function DashboardPage({ searchParams }) {
         <p className="text-xs text-muted-foreground">Pela data de envio (rascunhos, pela de criação).</p>
       </div>
 
-      <div className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
+      {/* grid-cols-1 = minmax(0, 1fr): sem ela, a coluna única cresce até o texto mais longo e o cartão passa da tela. */}
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
         <ConversionCard metrics={metrics} periodText={periodText} />
 
         <section aria-label="Indicadores" className="grid grid-cols-2 gap-3 sm:gap-4">
@@ -137,7 +138,7 @@ export default async function DashboardPage({ searchParams }) {
 
       <SendsChart series={buildSendSeries(sends, { period, now })} periodText={periodText} />
 
-      <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
         <StatusBreakdown
           byStatus={metrics.byStatus}
           total={metrics.total}

@@ -22,7 +22,7 @@ export function ClientRowActions({ client }) {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon-sm" className="text-muted-foreground">
+          <Button variant="ghost" size="icon-sm" className="text-muted-foreground max-md:size-10">
             <EllipsisIcon />
             <span className="sr-only">Ações para {client.name}</span>
           </Button>

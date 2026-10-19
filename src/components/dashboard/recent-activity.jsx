@@ -72,7 +72,7 @@ export function RecentActivity({ items, className }) {
 
       <Link
         href="/quotes"
-        className="group mt-auto inline-flex items-center gap-1.5 self-start rounded-md text-sm font-medium text-primary-ink outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="group mt-auto -mb-1.5 inline-flex items-center gap-1.5 self-start rounded-md py-1.5 text-sm font-medium text-primary-ink outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         Ver todas as propostas
         <ArrowRightIcon aria-hidden="true" className="size-3.5 transition-transform group-hover:translate-x-0.5" />

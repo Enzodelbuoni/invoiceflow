@@ -54,7 +54,7 @@ function ViewToggle({ view, onChange }) {
           aria-pressed={view === value}
           onClick={() => onChange(value)}
           className={cn(
-            "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
+            "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 max-md:h-9 max-md:px-3",
             view === value && "bg-background text-foreground shadow-xs ring-1 ring-border dark:bg-input/40",
           )}
         >

@@ -35,3 +35,17 @@ const shortDateFormatter = new Intl.DateTimeFormat("pt-BR", {
 export function formatShortDate(date) {
   return shortDateFormatter.format(new Date(date))
 }
+
+const dayMonthFormatter = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short", timeZone: "America/Sao_Paulo" })
+const yearFormatter = new Intl.DateTimeFormat("pt-BR", { year: "numeric", timeZone: "America/Sao_Paulo" })
+
+/**
+ * Como formatShortDate, mas sem o ano quando é o ano de `now` (para espaços
+ * curtos): "6 de out." / "6 de out. de 2025". Fuso de São Paulo.
+ */
+export function formatShortDateCompact(date, now = new Date()) {
+  const value = new Date(date)
+  return yearFormatter.format(value) === yearFormatter.format(now)
+    ? dayMonthFormatter.format(value)
+    : shortDateFormatter.format(value)
+}

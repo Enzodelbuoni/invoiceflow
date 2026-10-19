@@ -49,9 +49,11 @@ function Price({ service }) {
   )
 }
 
+// Tabela quando a lista é larga, cartões quando é estreita (container query:
+// acompanha a sidebar, como nas listas de clientes e orçamentos).
 function ServicesTable({ services }) {
   return (
-    <div className="hidden overflow-hidden rounded-xl border bg-card shadow-sm md:block">
+    <div className="hidden overflow-hidden rounded-xl border bg-card shadow-sm @2xl:block">
       <Table className="table-fixed">
         <TableHeader>
           <TableRow className="hover:bg-transparent">
@@ -89,10 +91,10 @@ function ServicesTable({ services }) {
   )
 }
 
-// No celular a tabela vira uma lista de cartões.
+// Lista estreita (celular, ou sidebar aberta numa tela média): cartões.
 function ServicesCards({ services }) {
   return (
-    <ul className="flex flex-col gap-3 md:hidden">
+    <ul className="flex flex-col gap-3 @2xl:hidden">
       {services.map((service) => (
         <li key={service.id} className="relative flex items-start gap-3 rounded-xl border bg-card p-4 shadow-sm">
           <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -105,7 +107,7 @@ function ServicesCards({ services }) {
               <span className="text-muted-foreground"> por {formatServiceUnit(service.unit, 1)}</span>
             </p>
           </div>
-          <div className="relative z-10 -mt-1 -mr-1">
+          <div className="relative z-10 -mt-1 -mr-1 max-md:-mt-2.5 max-md:-mr-2.5">
             <ServiceRowActions service={service} />
           </div>
         </li>
@@ -157,10 +159,10 @@ export default async function ServicesPage({ searchParams }) {
             <p className="text-sm text-muted-foreground">Tente outro nome ou uma palavra da descrição.</p>
           </div>
         ) : (
-          <>
+          <div className="@container">
             <ServicesTable services={services} />
             <ServicesCards services={services} />
-          </>
+          </div>
         )}
       </div>
     </>

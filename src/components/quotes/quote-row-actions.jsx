@@ -53,7 +53,7 @@ export function QuoteRowActions({ quote, client, today, pdfAvailable = false, tr
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button id={triggerId} variant="ghost" size="icon-sm" className="text-muted-foreground">
+          <Button id={triggerId} variant="ghost" size="icon-sm" className="text-muted-foreground max-md:size-10">
             <EllipsisIcon />
             <span className="sr-only">
               Ações do orçamento {quote.quote_number} ({quote.title})

@@ -4,7 +4,7 @@ import { QuoteRowActions } from "@/components/quotes/quote-row-actions"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatIsoDateShort } from "@/lib/dates"
-import { formatShortDate } from "@/lib/format"
+import { formatShortDate, formatShortDateCompact } from "@/lib/format"
 import { formatCurrency } from "@/lib/money"
 import { validityHint } from "@/lib/quote-list"
 import { cn } from "@/lib/utils"
@@ -52,18 +52,21 @@ function ValidityHint({ quote, today, className }) {
   return <span className={cn("text-xs", HINT_TONES[hint.tone], className)}>{hint.text}</span>
 }
 
+// Layout fixo: as colunas estreitas têm largura definida e "Orçamento" fica com
+// o resto. Numa tabela automática, um título ou nome longo alarga a coluna até
+// caber inteiro (o truncate não funciona) e a tabela passa a rolar de lado.
 function QuotesTable({ quotes, today, pdfAvailable }) {
   return (
-    <div className="hidden overflow-hidden rounded-xl border bg-card shadow-sm @2xl:block">
-      <Table>
+    <div className="hidden overflow-hidden rounded-xl border bg-card shadow-sm @3xl:block">
+      <Table className="table-fixed">
         <TableHeader>
           <TableRow className="hover:bg-transparent">
             <TableHead className="pl-5">Orçamento</TableHead>
-            <TableHead>Cliente</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="hidden @4xl:table-cell">Data</TableHead>
-            <TableHead>Validade</TableHead>
-            <TableHead className="text-right">Total</TableHead>
+            <TableHead className="w-[24%]">Cliente</TableHead>
+            <TableHead className="w-32">Status</TableHead>
+            <TableHead className="hidden w-36 @5xl:table-cell">Data</TableHead>
+            <TableHead className="w-36">Validade</TableHead>
+            <TableHead className="w-32 text-right">Total</TableHead>
             <TableHead className="w-12 pr-3">
               <span className="sr-only">Ações</span>
             </TableHead>
@@ -74,25 +77,25 @@ function QuotesTable({ quotes, today, pdfAvailable }) {
             const reference = referenceDate(quote)
             return (
               <TableRow key={quote.id} className="relative">
-                <TableCell className="max-w-80 py-3 pl-5">
+                <TableCell className="py-3 pl-5">
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <QuoteTitle quote={quote} />
                     <span className="flex min-w-0 items-baseline gap-1.5">
                       <QuoteNumber quote={quote} />
                       {/* Sem a coluna "Data" (lista mais estreita), a data vem aqui. */}
-                      <span className="truncate text-xs text-muted-foreground @4xl:hidden">
-                        · {reference.verb} em {formatShortDate(reference.date)}
+                      <span className="truncate text-xs text-muted-foreground @5xl:hidden">
+                        · {reference.verb} em {formatShortDateCompact(reference.date)}
                       </span>
                     </span>
                   </div>
                 </TableCell>
-                <TableCell className="max-w-56 text-sm">
+                <TableCell className="text-sm">
                   <ClientName client={quote.client} />
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={quote.status} size="sm" />
                 </TableCell>
-                <TableCell className="hidden text-sm @4xl:table-cell">
+                <TableCell className="hidden text-sm @5xl:table-cell">
                   <div className="flex flex-col">
                     <span>{formatShortDate(reference.date)}</span>
                     <span className="text-xs text-muted-foreground">{reference.verb}</span>
@@ -126,7 +129,7 @@ function QuotesTable({ quotes, today, pdfAvailable }) {
 // Lista estreita (celular, ou sidebar aberta numa tela média): cartões.
 function QuotesCards({ quotes, today, pdfAvailable }) {
   return (
-    <ul className="flex flex-col gap-3 @2xl:hidden">
+    <ul className="flex flex-col gap-3 @3xl:hidden">
       {quotes.map((quote) => {
         const reference = referenceDate(quote)
         return (
@@ -138,7 +141,7 @@ function QuotesCards({ quotes, today, pdfAvailable }) {
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 <StatusBadge status={quote.status} size="sm" />
-                <div className="relative z-10 -my-1 -mr-2">
+                <div className="relative z-10 -my-1 -mr-2 max-md:-my-2 max-md:-mr-3">
                   <QuoteRowActions
                     quote={quote}
                     client={quote.client}

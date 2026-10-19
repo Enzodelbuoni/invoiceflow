@@ -1,7 +1,10 @@
 import { cn } from "@/lib/utils"
 
 /**
- * Cabeçalho padrão das páginas da área privada.
+ * Cabeçalho padrão das páginas da área privada. Título e ações ficam lado a
+ * lado quando cabem; quando não (celular, ou a sidebar aberta numa tela
+ * média), as ações descem para a linha de baixo em vez de espremer o título.
+ * Depende da largura real do cabeçalho, não da tela (flex-wrap + base do título).
  * @param {{
  *   eyebrow?: string,
  *   title: string,
@@ -12,13 +15,8 @@ import { cn } from "@/lib/utils"
  */
 export function PageHeader({ eyebrow, title, description, actions, className }) {
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between",
-        className
-      )}
-    >
-      <div className="flex min-w-0 flex-col gap-2">
+    <div className={cn("flex flex-wrap items-end justify-between gap-x-6 gap-y-5", className)}>
+      <div className="flex min-w-0 flex-[1_1_22rem] flex-col gap-2">
         {eyebrow && (
           <p className="text-xs font-medium tracking-[0.14em] text-primary-ink uppercase">
             {eyebrow}

@@ -36,7 +36,8 @@ function InfoItem({ icon: Icon, label, children }) {
       </span>
       <div className="flex min-w-0 flex-col gap-0.5">
         <dt className="text-xs text-muted-foreground">{label}</dt>
-        <dd className="text-sm break-words">{children || <span className="text-muted-foreground">Não informado</span>}</dd>
+        {/* wrap-anywhere (e não break-words): um e-mail longo também deixa a coluna encolher no celular. */}
+        <dd className="text-sm wrap-anywhere">{children || <span className="text-muted-foreground">Não informado</span>}</dd>
       </div>
     </div>
   )
@@ -52,12 +53,13 @@ export default async function ClientPage({ params }) {
   return (
     <>
       <div className="flex flex-col gap-6">
-        <Link href="/clients" className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+        <Link href="/clients" className="-my-2 flex w-fit items-center gap-1.5 py-2 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeftIcon aria-hidden="true" className="size-4" />
           Clientes
         </Link>
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-center gap-4">
+        {/* Os botões descem para a linha de baixo quando não cabem ao lado do nome (celular, sidebar aberta). */}
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-5">
+          <div className="flex min-w-0 flex-[1_1_20rem] items-center gap-4">
             <ClientAvatar name={client.name} size="lg" />
             <div className="flex min-w-0 flex-col gap-1">
               <h1 className="font-display text-4xl leading-tight tracking-[-0.01em] text-balance">{client.name}</h1>
@@ -78,12 +80,12 @@ export default async function ClientPage({ params }) {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <section aria-labelledby="contato" className="rounded-xl border bg-card p-5 shadow-sm lg:col-span-2">
           <h2 id="contato" className="mb-5 text-sm font-semibold">
             Contato e dados
           </h2>
-          <dl className="grid gap-5 sm:grid-cols-2">
+          <dl className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <InfoItem icon={MailIcon} label="E-mail">
               {client.email && (
                 <a href={`mailto:${client.email}`} className="text-primary-ink hover:underline">
@@ -99,7 +101,7 @@ export default async function ClientPage({ params }) {
                     href={whatsappUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-medium text-success hover:underline"
+                    className="-my-2 inline-flex items-center gap-1 py-2 text-xs font-medium text-success hover:underline"
                   >
                     <MessageCircleIcon aria-hidden="true" className="size-3.5" />
                     WhatsApp
