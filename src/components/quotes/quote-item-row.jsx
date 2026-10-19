@@ -19,7 +19,14 @@ function IconAction({ id, label, tooltip, icon: Icon, className, ...props }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button id={id} type="button" variant="ghost" size="icon-sm" className={cn("text-muted-foreground", className)} {...props}>
+        <Button
+          id={id}
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className={cn("text-muted-foreground max-md:size-9", className)}
+          {...props}
+        >
           <Icon />
           <span className="sr-only">{label}</span>
         </Button>
@@ -115,24 +122,25 @@ export function QuoteItemRow({ form, index, count, fieldId, fromCatalog, catalog
       <fieldset
         aria-labelledby={titleId}
         className={cn(
-          "min-w-0 rounded-xl border bg-background/60 shadow-xs transition-colors dark:bg-background/30",
+          "@container min-w-0 rounded-xl border bg-background/60 shadow-xs transition-colors dark:bg-background/30",
           hasError && "border-destructive/50",
         )}
       >
         <div className="flex items-center gap-2 border-b border-dashed py-2 pr-2 pl-4">
-          <h3 id={titleId} className="flex min-w-0 items-center gap-2 text-sm font-medium">
+          <h3 id={titleId} className="flex shrink-0 items-center gap-2 text-sm font-medium whitespace-nowrap">
             <span className="text-muted-foreground tabular-nums">Item {position}</span>
           </h3>
           <span
             className={cn(
-              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.6875rem] font-medium",
+              "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[0.6875rem] font-medium whitespace-nowrap",
               fromCatalog
                 ? "bg-primary/10 text-primary-ink dark:bg-primary/15"
                 : "bg-muted text-muted-foreground",
             )}
           >
             {fromCatalog ? <PackageIcon aria-hidden="true" className="size-3" /> : <PencilLineIcon aria-hidden="true" className="size-3" />}
-            {fromCatalog ? "Do catálogo" : "Avulso"}
+            {/* Item estreito (celular), com os botões de toque maiores: só o ícone na tela. */}
+            <span className="@max-xs:sr-only">{fromCatalog ? "Do catálogo" : "Avulso"}</span>
           </span>
           <div className="ml-auto flex items-center gap-0.5">
             <IconAction

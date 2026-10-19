@@ -41,7 +41,7 @@ function SummaryRow({ label, sign, cents, active = true, note }) {
  * Valor que troca com uma animação curta (o antigo sobe e some, o novo entra
  * por baixo). Com movimento reduzido, o MotionConfig global desliga.
  */
-function AnimatedAmount({ text, className }) {
+export function AnimatedAmount({ text, className }) {
   return (
     <span className={cn("relative inline-flex overflow-hidden", className)}>
       <AnimatePresence mode="popLayout" initial={false}>
@@ -78,21 +78,17 @@ function ValidityLine({ control, today }) {
 }
 
 /**
- * Resumo financeiro + ações (QuoteSummary e QuoteActions do plano), calculado
- * ao vivo pelo motor de cálculos a partir do que está digitado. No desktop fica
- * fixo ao lado do formulário enquanto a página rola. `footer`: linha embaixo
- * das ações (o indicador da cópia de segurança local). `saving`: o orçamento
- * está sendo salvo (botão desativado com "Salvando…"). `saveLabel`: texto do
- * botão de salvar ("Salvar rascunho" ou, na edição, "Salvar alterações").
- * `onPreview`: abre a pré-visualização do documento.
+ * Totais ao vivo do que está digitado, pelo motor de cálculos (tolerante:
+ * quantidade/preço ainda inválidos contam como zero). Usado pelo resumo e
+ * pela barra do celular, para os dois mostrarem a mesma conta.
+ * @returns {{ input: object, totals: object, itemCount: number, totalText: string }}
+ *   `totalText`: "R$ 1.500,00" ou "Acima do limite".
  */
-export function QuoteSummary({ control, today, clients, footer, onPreview, saving = false, saveLabel = "Salvar rascunho" }) {
-  const [title, clientId, items, discountType, discountValue, taxEnabled, taxRate] = useWatch({
+export function useQuoteTotals(control) {
+  const [items, discountType, discountValue, taxEnabled, taxRate] = useWatch({
     control,
-    name: ["title", "client_id", "items", "discount_type", "discount_value", "tax_enabled", "tax_rate"],
+    name: ["items", "discount_type", "discount_value", "tax_enabled", "tax_rate"],
   })
-  const client = clients.find((option) => option.id === clientId)
-
   const input = totalsInputFromForm({
     items,
     discount_type: discountType,
@@ -101,17 +97,41 @@ export function QuoteSummary({ control, today, clients, footer, onPreview, savin
     tax_rate: taxRate,
   })
   const totals = calculateQuoteTotals(input)
-  const itemCount = items?.length ?? 0
+  return {
+    input,
+    totals,
+    itemCount: items?.length ?? 0,
+    totalText: totals.total === null ? "Acima do limite" : formatCurrency(totals.total),
+  }
+}
+
+/**
+ * Resumo financeiro + ações (QuoteSummary e QuoteActions do plano), calculado
+ * ao vivo pelo motor de cálculos a partir do que está digitado. Com espaço para
+ * duas colunas, fica fixo ao lado do formulário enquanto a página rola; numa
+ * coluna só, vem depois das seções (e a QuoteTotalBar mostra o total e o
+ * "Salvar" enquanto ele não está na tela). `footer`: linha embaixo das ações
+ * (o indicador da cópia de segurança local). `saving`: o orçamento está sendo
+ * salvo (botão desativado com "Salvando…"). `saveLabel`: texto do botão de
+ * salvar ("Salvar rascunho" ou, na edição, "Salvar alterações").
+ * `onPreview(triggerId)`: abre a pré-visualização do documento (o foco volta
+ * ao botão `triggerId` ao fechar). As ações (`#quote-summary-actions`) são
+ * observadas pela barra do celular.
+ */
+export function QuoteSummary({ control, today, clients, footer, onPreview, saving = false, saveLabel = "Salvar rascunho" }) {
+  const [title, clientId] = useWatch({ control, name: ["title", "client_id"] })
+  const client = clients.find((option) => option.id === clientId)
+  const { input, totals, itemCount, totalText } = useQuoteTotals(control)
 
   const discountLabel =
     input.discount_type === DISCOUNT_TYPE.PERCENT ? `Desconto (${formatPercentValue(input.discount_value)})` : "Desconto"
   const taxLabel = input.tax_rate_bps ? `Impostos (${formatPercentValue(input.tax_rate_bps)})` : "Impostos"
-  const totalText = totals.total === null ? "Acima do limite" : formatCurrency(totals.total)
 
   return (
     <aside
+      id="quote-summary"
       aria-labelledby="quote-summary-title"
-      className="flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm lg:sticky lg:top-20"
+      className="flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm @4xl:sticky @4xl:top-20"
     >
       <div className="flex flex-col gap-1 border-b px-5 py-4">
         <p className="text-xs font-medium tracking-[0.14em] text-primary-ink uppercase">Resumo</p>
@@ -161,13 +181,13 @@ export function QuoteSummary({ control, today, clients, footer, onPreview, savin
         <ValidityLine control={control} today={today} />
       </div>
 
-      <div className="flex flex-col gap-2 border-t p-5">
+      <div id="quote-summary-actions" className="flex flex-col gap-2 border-t p-5">
         {/* Envia o formulário: valida tudo (erros destacados e foco no primeiro) e salva na conta. */}
         <Button type="submit" disabled={saving} aria-busy={saving || undefined} className="h-10 shadow-sm">
           {saving ? <Spinner data-icon="inline-start" aria-hidden="true" /> : <SaveIcon data-icon="inline-start" />}
           {saving ? "Salvando…" : saveLabel}
         </Button>
-        <Button id="quote-preview-trigger" type="button" variant="outline" className="h-10" onClick={onPreview}>
+        <Button id="quote-preview-trigger" type="button" variant="outline" className="h-10" onClick={() => onPreview("quote-preview-trigger")}>
           <EyeIcon data-icon="inline-start" />
           Pré-visualizar
         </Button>

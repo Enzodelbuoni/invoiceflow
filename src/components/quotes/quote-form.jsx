@@ -17,6 +17,7 @@ import { QuoteNotes } from "@/components/quotes/quote-notes"
 import { QuotePreviewDialog } from "@/components/quotes/quote-preview-dialog"
 import { QuoteSection } from "@/components/quotes/quote-section"
 import { QuoteSummary } from "@/components/quotes/quote-summary"
+import { QuoteTotalBar } from "@/components/quotes/quote-total-bar"
 import { useQuoteDraft } from "@/hooks/use-quote-draft"
 import { countErrors, firstErrorPath } from "@/lib/form-errors"
 import { quoteDraftKey } from "@/lib/quote-draft"
@@ -70,7 +71,9 @@ function useOptionsWithCreated(options) {
 
 /**
  * Construtor de orçamentos: seções numeradas à esquerda e o resumo financeiro
- * fixo à direita (no celular, o resumo vem depois das seções).
+ * fixo à direita quando há espaço; numa coluna só (celular, sidebar aberta numa
+ * tela média), o resumo vem depois das seções e uma barra no rodapé
+ * (QuoteTotalBar) mantém o total e o "Salvar" à vista.
  * Validação com o schema Zod do orçamento (Sprint 7); salvar grava na conta
  * pela Server Action (Sprint 10), que revalida tudo e calcula os totais no
  * servidor. Uma cópia do que está sendo digitado fica neste navegador
@@ -177,17 +180,21 @@ export function QuoteForm({ today, userId, clients, services, issuer, quote }) {
 
   // Pré-visualização: uma foto do formulário no momento do clique (o diálogo é modal).
   // O conteúdo fica depois de fechar, para a animação de saída não piscar vazia.
+  // `triggerId`: o botão que abriu (o do resumo ou o da barra do celular), que
+  // recebe o foco de volta ao fechar.
   const [preview, setPreview] = useState(null)
   const [previewOpen, setPreviewOpen] = useState(false)
-  function openPreview() {
+  function openPreview(triggerId) {
     const values = form.getValues()
     const client = clientOptions.find((option) => option.id === values.client_id) ?? null
     setPreview({
       quote: previewQuoteFromForm(values, quote ? { quote_number: quote.quote_number, created_at: quote.created_at } : {}),
       client: client && { name: client.name, company: client.company, email: client.email },
+      triggerId,
     })
     setPreviewOpen(true)
   }
+  const saving = form.formState.isSubmitting || navigating
 
   function onInvalid(errors) {
     const count = countErrors(errors)
@@ -201,7 +208,10 @@ export function QuoteForm({ today, userId, clients, services, issuer, quote }) {
   return (
     // O aviso de rascunho fica fora do <form> (e o AnimatePresence dentro de
     // um <div>, não como filho direto do template.js da área privada).
-    <div>
+    // @container: as duas colunas dependem da largura do construtor, não da
+    // tela (com a sidebar aberta numa tela de 1024 px, o formulário ficaria
+    // espremido ao lado do resumo).
+    <div className="@container">
       <AnimatePresence initial={false}>
         {draft.pendingDraft && (
           <QuoteDraftBanner
@@ -219,7 +229,7 @@ export function QuoteForm({ today, userId, clients, services, issuer, quote }) {
         noValidate
         onSubmit={form.handleSubmit(onValid, onInvalid)}
         onKeyDown={preventImplicitSubmit}
-        className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]"
+        className="grid grid-cols-1 items-start gap-6 @4xl:grid-cols-[minmax(0,1fr)_20rem] @6xl:grid-cols-[minmax(0,1fr)_22rem]"
       >
         <div className="flex min-w-0 flex-col gap-6">
           <QuoteSection id="quote-client" step={1} title="Cliente" description="Quem vai receber a proposta.">
@@ -262,11 +272,14 @@ export function QuoteForm({ today, userId, clients, services, issuer, quote }) {
           control={form.control}
           today={today}
           clients={clientOptions}
-          saving={form.formState.isSubmitting || navigating}
+          saving={saving}
           saveLabel={editing ? "Salvar alterações" : "Salvar rascunho"}
           onPreview={openPreview}
           footer={<QuoteDraftStatus draftKey={draftKey} active={draft.autosaving} />}
         />
+
+        {/* Uma coluna só: total + Salvar sempre à mão (some quando o resumo aparece). */}
+        <QuoteTotalBar control={form.control} saving={saving} onPreview={() => openPreview("quote-bar-preview")} />
       </form>
 
       <QuotePreviewDialog
@@ -275,6 +288,7 @@ export function QuoteForm({ today, userId, clients, services, issuer, quote }) {
         quote={preview?.quote ?? null}
         client={preview?.client ?? null}
         issuer={issuer}
+        returnFocusId={preview?.triggerId}
       />
     </div>
   )

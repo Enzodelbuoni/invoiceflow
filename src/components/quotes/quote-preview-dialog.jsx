@@ -12,15 +12,16 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
  *   quote: object | null, client: object | null, issuer: { name: string, email?: string|null, phone?: string|null } }} props
  *   `quote` de previewQuoteFromForm; `client` com o que o seletor conhece (nome, empresa, e-mail).
  */
-export function QuotePreviewDialog({ open, onOpenChange, quote, client, issuer }) {
+export function QuotePreviewDialog({ open, onOpenChange, quote, client, issuer, returnFocusId = "quote-preview-trigger" }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="flex max-h-[calc(100svh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl"
-        // Sem DialogTrigger (o diálogo é controlado): o foco volta ao botão "Pré-visualizar".
+        // Sem DialogTrigger (o diálogo é controlado): o foco volta ao botão
+        // "Pré-visualizar" que abriu (o do resumo ou o da barra do celular).
         onCloseAutoFocus={(event) => {
           event.preventDefault()
-          document.getElementById("quote-preview-trigger")?.focus()
+          document.getElementById(returnFocusId ?? "quote-preview-trigger")?.focus()
         }}
       >
         <DialogHeader className="border-b px-5 py-4 text-left sm:px-6">

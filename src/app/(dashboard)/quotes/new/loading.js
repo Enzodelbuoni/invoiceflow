@@ -28,13 +28,16 @@ export default function NewQuoteLoading() {
         <Skeleton className="h-10 w-64" />
         <Skeleton className="h-4 w-96 max-w-full" />
       </div>
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="flex flex-col gap-6">
-          <SectionSkeleton lines={1} />
-          <SectionSkeleton lines={3} />
-          <SectionSkeleton lines={1} />
+      {/* Mesma grade do QuoteForm (container query). */}
+      <div className="@container">
+        <div className="grid grid-cols-1 items-start gap-6 @4xl:grid-cols-[minmax(0,1fr)_20rem] @6xl:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="flex flex-col gap-6">
+            <SectionSkeleton lines={1} />
+            <SectionSkeleton lines={3} />
+            <SectionSkeleton lines={1} />
+          </div>
+          <Skeleton className="h-96 rounded-2xl" />
         </div>
-        <Skeleton className="h-96 rounded-2xl" />
       </div>
     </div>
   )

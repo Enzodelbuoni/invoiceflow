@@ -23,11 +23,14 @@ export default async function DashboardLayout({ children }) {
         Pular para o conteúdo
       </a>
       <AppSidebar user={{ name: user.name, email: user.email }} />
-      <SidebarInset className="overflow-hidden md:peer-data-[variant=inset]:h-[calc(100svh-1rem)] md:peer-data-[variant=inset]:shadow-md md:peer-data-[variant=inset]:ring-1 md:peer-data-[variant=inset]:ring-sidebar-border">
+      {/* overflow-clip (e não hidden): corta o que transborda sem virar contêiner de
+          rolagem; com hidden, o cabeçalho e a barra do construtor (sticky) não
+          grudavam no celular, onde quem rola é a página. */}
+      <SidebarInset className="overflow-clip md:peer-data-[variant=inset]:h-[calc(100svh-1rem)] md:peer-data-[variant=inset]:shadow-md md:peer-data-[variant=inset]:ring-1 md:peer-data-[variant=inset]:ring-sidebar-border">
         {/* No desktop o painel rola por dentro (cabeçalho fixo no topo do painel);
             no mobile quem rola é a página. scroll-pt: o que o navegador ou o Next
             rolam até a vista (página nova, campo focado) para abaixo do cabeçalho. */}
-        <div className="relative flex flex-1 flex-col md:scroll-pt-16 md:overflow-y-auto">
+        <div className="relative flex flex-1 flex-col md:scroll-pt-16 md:overflow-y-auto md:has-[[data-quote-bar]]:scroll-pb-24">
           {/* Brilho sutil da marca no topo do painel. */}
           <div
             aria-hidden="true"

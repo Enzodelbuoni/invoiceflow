@@ -284,6 +284,11 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     text-rendering: optimizeLegibility;
   }
+  /* Construtor numa coluna só: a barra fixa do rodapé (total + Salvar) não
+     cobre o campo que o teclado ou o foco no primeiro erro trazem à vista. */
+  html:has([data-quote-bar]) {
+    scroll-padding-bottom: 6rem;
+  }
   ::selection {
     background-color: color-mix(in oklch, var(--primary) 22%, transparent);
   }

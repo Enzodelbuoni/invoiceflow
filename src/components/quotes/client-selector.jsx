@@ -136,13 +136,13 @@ export function ClientSelector({ form, clients, onClientCreated }) {
               <ArrowLeftRightIcon data-icon="inline-start" />
               Trocar<span className="sr-only"> cliente</span>
             </>,
-            { variant: "outline", size: "sm" },
+            { variant: "outline", size: "sm", className: "max-md:h-10 max-md:px-3" },
           )}
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
-            className="text-muted-foreground"
+            className="text-muted-foreground max-md:size-10"
             onClick={() => {
               refocusTrigger.current = true
               field.onChange("")

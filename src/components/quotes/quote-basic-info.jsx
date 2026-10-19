@@ -48,7 +48,7 @@ function ValidityField({ form, today }) {
                 aria-pressed={active}
                 onClick={() => choose(preset)}
                 className={cn(
-                  "h-8 rounded-full border px-3 text-xs font-medium tabular-nums transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  "h-8 rounded-full border px-3 text-xs font-medium tabular-nums transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 max-md:h-10 max-md:px-4 max-md:text-sm",
                   active
                     ? "border-primary/40 bg-primary/10 text-primary-ink dark:bg-primary/15"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",

@@ -67,7 +67,7 @@ function AdjustmentRow({ id, icon: Icon, title, description, emptyLabel, open, o
             variant="ghost"
             size="sm"
             onClick={onRemove}
-            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive dark:hover:bg-destructive/20"
+            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive max-md:h-10 dark:hover:bg-destructive/20"
           >
             <XIcon data-icon="inline-start" />
             Remover<span className="sr-only"> {title.toLowerCase()}</span>
@@ -75,7 +75,7 @@ function AdjustmentRow({ id, icon: Icon, title, description, emptyLabel, open, o
         ) : (
           <>
             <span className="hidden text-sm text-muted-foreground sm:inline">{emptyLabel}</span>
-            <Button ref={addRef} type="button" variant="outline" size="sm" onClick={onAdd}>
+            <Button ref={addRef} type="button" variant="outline" size="sm" onClick={onAdd} className="max-md:h-10 max-md:px-3">
               <PlusIcon data-icon="inline-start" />
               Adicionar<span className="sr-only"> {title.toLowerCase()}</span>
             </Button>
