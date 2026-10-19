@@ -79,7 +79,7 @@ Pendente também: a **landing page `/`** continua provisória. Refazer antes do 
 - [ ] **Antes do deploy (PDF, etapa 24):** instalar o Chromium para Linux (`@sparticuz/chromium`, exige Node ≥ 22.17) e apontar o gerador para ele; `maxDuration` da rota `/quote/[publicId]/pdf`; liberar a página pública para o headless se houver proteção de deploy; **limitar a frequência de geração de PDF** (rota pública que abre um Chrome por pedido) ou fazer cache do arquivo.
 - [ ] **Antes do deploy:** evitar a pausa do plano Free (7 dias com pouca atividade), por exemplo com um ping agendado (GitHub Actions). Projeto pausado se reativa em **Resume project** (até 1 ano).
 - [x] ~~Projeto dentro do OneDrive~~ → resolvido na etapa 2 (movido para `C:\dev\invoiceflow`).
-- [ ] Criar repositório remoto no GitHub (opcional, quando o usuário quiser).
+- [x] ~~Criar repositório remoto no GitHub~~ → existe: `origin` = https://github.com/Enzodelbuoni/invoiceflow (branch `master`). Em 2026-10-19 o usuário pediu para publicar: enviados os commits até o Sprint 20 (antes o GitHub estava no Sprint 14). **Enviar (`git push`) só quando o usuário pedir.**
 - [ ] (Opcional, requer admin) Adicionar `C:\dev` às exclusões do Windows Defender para acelerar `npm install`/build. Não foi feito — só sugerido.
 
 ## Decisões técnicas (importante lembrar)
