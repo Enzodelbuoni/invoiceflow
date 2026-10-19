@@ -53,6 +53,8 @@
   --color-status-declined: var(--status-declined);
   --color-status-expired: var(--status-expired);
   --color-status-cancelled: var(--status-cancelled);
+  --color-viz-approved: var(--viz-approved);
+  --color-viz-reached: var(--viz-reached);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -186,6 +188,15 @@
   --status-declined: oklch(0.51 0.19 25);
   --status-expired: oklch(0.52 0.12 55);
   --status-cancelled: oklch(0.52 0.005 260);
+  /*
+   * Gráfico "enviadas e aprovadas" (etapa 27): um matiz só (o da marca), o
+   * escuro para as aprovadas e o claro para as demais enviadas. Validados com
+   * o script da skill dataviz contra o cartão (#ffffff): passam como rampa
+   * ordinal e como par categórico (ΔE 26,6 normal / 23,5 daltonismo). O claro
+   * fica em 2,25:1, então o gráfico tem legenda, tooltip e visão em tabela.
+   */
+  --viz-approved: oklch(0.511 0.23 268);
+  --viz-reached: oklch(0.75 0.115 268);
   /* Elevação: sombras suaves tingidas com o hue da marca. */
   --elevation-xs: 0 1px 2px 0 oklch(0.2 0.03 268 / 0.05);
   --elevation-sm: 0 1px 2px 0 oklch(0.2 0.03 268 / 0.04), 0 1px 3px 0 oklch(0.2 0.03 268 / 0.06);
@@ -236,6 +247,10 @@
   --status-declined: oklch(0.8 0.1 22);
   --status-expired: oklch(0.84 0.12 75);
   --status-cancelled: oklch(0.74 0.005 260);
+  /* Gráfico no escuro: passos próprios, validados contra o cartão escuro
+     (#16181d): ΔE 16,1 normal / 16,0 daltonismo; o mais escuro em 2,87:1. */
+  --viz-approved: oklch(0.66 0.16 268);
+  --viz-reached: oklch(0.5 0.14 268);
   /* No escuro as sombras são mais densas e ganham um brilho interno de 1px no topo. */
   --elevation-xs: 0 1px 2px 0 oklch(0 0 0 / 0.3);
   --elevation-sm: inset 0 1px 0 0 oklch(1 0 0 / 0.04), 0 1px 2px 0 oklch(0 0 0 / 0.3), 0 1px 3px 0 oklch(0 0 0 / 0.2);

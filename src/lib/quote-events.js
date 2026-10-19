@@ -25,6 +25,51 @@ export function quoteEventLabel(item) {
   return QUOTE_EVENT_LABELS[item.type] ?? item.type
 }
 
+// Atividade recente do painel (Sprint 18): os marcos de cada proposta e o que
+// o cliente fez. Criar, salvar e os downloads do próprio dono ficam de fora: é
+// o que a própria pessoa acabou de fazer, e encheria a lista.
+export const ACTIVITY_EVENT_TYPES = Object.freeze([
+  "sent",
+  "viewed",
+  "approved",
+  "declined",
+  "expired",
+  "cancelled",
+  "downloaded",
+])
+
+export const RECENT_ACTIVITY_LIMIT = 6
+
+/** O evento entra na atividade recente? (download só o do cliente) */
+export function isActivityEvent(event) {
+  if (!ACTIVITY_EVENT_TYPES.includes(event.type)) return false
+  return event.type !== "downloaded" || event.metadata?.by === "client"
+}
+
+/**
+ * Linhas do banco (evento + proposta + cliente, do mais novo ao mais antigo)
+ * → itens da atividade recente. Sem a proposta (não deveria acontecer: o RLS
+ * é o mesmo), o item sai.
+ * @param {Array<{ id: string, type: string, created_at: string, metadata?: { by?: string }|null,
+ *   quote: { id: string, quote_number: string, title: string, client: { name: string }|null }|null }>} rows
+ */
+export function toActivityItems(rows) {
+  return rows
+    .filter((row) => row.quote && isActivityEvent(row))
+    .map((row) => ({
+      id: row.id,
+      type: row.type,
+      ...(row.metadata?.by ? { by: row.metadata.by } : {}),
+      created_at: row.created_at,
+      quote: {
+        id: row.quote.id,
+        number: row.quote.quote_number,
+        title: row.quote.title,
+        clientName: row.quote.client?.name ?? null,
+      },
+    }))
+}
+
 // Eventos que se repetem em sequência e viram um item só.
 const GROUPED_TYPES = new Set(["updated", "downloaded"])
 

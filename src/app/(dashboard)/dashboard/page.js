@@ -4,12 +4,15 @@ import { ClockIcon, FileTextIcon, PlusIcon, SendIcon, TrendingUpIcon, WalletIcon
 import { ConversionCard } from "@/components/dashboard/conversion-card"
 import { KpiTile } from "@/components/dashboard/kpi-tile"
 import { PeriodFilter } from "@/components/dashboard/period-filter"
+import { RecentActivity } from "@/components/dashboard/recent-activity"
+import { SendsChart } from "@/components/dashboard/sends-chart"
 import { StatusBreakdown } from "@/components/dashboard/status-breakdown"
 import { PageHeader } from "@/components/layout/page-header"
 import { EmptyState } from "@/components/shared/empty-state"
 import { Button } from "@/components/ui/button"
 import { countLabel, describePeriod, parsePeriod, periodSince } from "@/lib/dashboard"
-import { getDashboard } from "@/lib/data/dashboard"
+import { buildSendSeries } from "@/lib/dashboard-series"
+import { getDashboard, getSendSeries, listRecentActivity } from "@/lib/data/dashboard"
 import { formatLongDate } from "@/lib/format"
 import { formatCurrency, formatCurrencyCompact } from "@/lib/money"
 
@@ -32,17 +35,24 @@ function money(cents) {
 }
 
 /**
- * Painel (Sprint 18): conversão, valores e propostas por situação no período
- * escolhido (?periodo=30d|90d|12m|tudo). Os números vêm de uma função do banco
- * (quote_dashboard); o período conta pela data de envio (o que nunca foi
- * enviado, pela de criação).
+ * Painel (Sprint 18): conversão, valores, o gráfico de enviadas e aprovadas e
+ * as propostas por situação no período escolhido (?periodo=30d|90d|12m|tudo),
+ * mais a atividade recente (de qualquer período). Os números vêm de funções do
+ * banco (quote_dashboard e quote_sends_by_day); o período conta pela data de
+ * envio (o que nunca foi enviado, pela de criação).
  */
 export default async function DashboardPage({ searchParams }) {
   const { periodo } = await searchParams
   const period = parsePeriod(periodo)
   const periodText = describePeriod(period)
 
-  const metrics = await getDashboard(periodSince(period))
+  const now = new Date()
+  const since = periodSince(period, now)
+  const [metrics, sends, activity] = await Promise.all([
+    getDashboard(since),
+    getSendSeries(since),
+    listRecentActivity(),
+  ])
   // Período vazio: ainda existe alguma proposta? (senão, o convite para a primeira)
   const everything = metrics?.total === 0 && period.days !== null ? await getDashboard(null) : metrics
 
@@ -124,7 +134,13 @@ export default async function DashboardPage({ searchParams }) {
         </section>
       </div>
 
-      <StatusBreakdown byStatus={metrics.byStatus} total={metrics.total} periodText={periodText} />
+      <SendsChart series={buildSendSeries(sends, { period, now })} periodText={periodText} />
+
+      <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
+        <StatusBreakdown byStatus={metrics.byStatus} total={metrics.total} periodText={periodText} />
+        {/* Fora do período de propósito: o subtítulo do cartão avisa. */}
+        <RecentActivity items={activity} />
+      </div>
     </>
   )
 }
