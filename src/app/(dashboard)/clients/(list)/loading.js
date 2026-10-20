@@ -1,9 +1,10 @@
+import { LoadingRegion } from "@/components/shared/page-skeletons"
 import { Skeleton } from "@/components/ui/skeleton"
 
 // Esqueleto da lista de clientes enquanto o servidor busca os dados.
 export default function ClientsLoading() {
   return (
-    <div aria-busy="true" aria-label="Carregando clientes" className="flex flex-col gap-8">
+    <LoadingRegion label="Carregando clientes">
       <div className="flex items-end justify-between gap-4">
         <div className="flex flex-col gap-3">
           <Skeleton className="h-10 w-48" />
@@ -24,6 +25,6 @@ export default function ClientsLoading() {
           </div>
         ))}
       </div>
-    </div>
+    </LoadingRegion>
   )
 }

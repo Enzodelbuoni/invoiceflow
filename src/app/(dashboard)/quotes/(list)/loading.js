@@ -1,9 +1,10 @@
+import { LoadingRegion } from "@/components/shared/page-skeletons"
 import { Skeleton } from "@/components/ui/skeleton"
 
 // Esqueleto da lista de orçamentos enquanto o servidor busca os dados.
 export default function QuotesLoading() {
   return (
-    <div aria-busy="true" aria-label="Carregando orçamentos" className="flex flex-col gap-8">
+    <LoadingRegion label="Carregando orçamentos">
       <div className="flex items-end justify-between gap-4">
         <div className="flex flex-col gap-3">
           <Skeleton className="h-10 w-56" />
@@ -39,6 +40,6 @@ export default function QuotesLoading() {
           ))}
         </div>
       </div>
-    </div>
+    </LoadingRegion>
   )
 }

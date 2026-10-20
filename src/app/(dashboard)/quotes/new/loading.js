@@ -1,3 +1,4 @@
+import { LoadingRegion } from "@/components/shared/page-skeletons"
 import { Skeleton } from "@/components/ui/skeleton"
 
 function SectionSkeleton({ lines = 2 }) {
@@ -22,7 +23,7 @@ function SectionSkeleton({ lines = 2 }) {
 // Esqueleto do construtor enquanto o servidor carrega os clientes.
 export default function NewQuoteLoading() {
   return (
-    <div aria-busy="true" aria-label="Carregando o construtor de orçamentos" className="flex flex-col gap-8">
+    <LoadingRegion label="Carregando o construtor de orçamentos">
       <div className="flex flex-col gap-3">
         <Skeleton className="h-3 w-24" />
         <Skeleton className="h-10 w-64" />
@@ -39,6 +40,6 @@ export default function NewQuoteLoading() {
           <Skeleton className="h-96 rounded-2xl" />
         </div>
       </div>
-    </div>
+    </LoadingRegion>
   )
 }
