@@ -1,26 +1,6 @@
-import { Geist_Mono, Inter, Instrument_Serif } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { fontVariables } from "./fonts";
 import "./globals.css";
-
-// Interface: Inter (variável, números tabulares para valores em R$).
-const inter = Inter({
-  variable: "--font-sans",
-  subsets: ["latin"],
-});
-
-// Títulos de destaque: Instrument Serif (só existe no peso 400; não usar com font-bold).
-const instrumentSerif = Instrument_Serif({
-  variable: "--font-instrument-serif",
-  subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
-});
-
-// Códigos e identificadores (ex.: nº do orçamento).
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata = {
   title: {
@@ -37,7 +17,7 @@ export default function RootLayout({ children }) {
     // antes da hidratação, então o atributo difere do HTML do servidor.
     <html
       lang="pt-BR"
-      className={`${inter.variable} ${instrumentSerif.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${fontVariables} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">

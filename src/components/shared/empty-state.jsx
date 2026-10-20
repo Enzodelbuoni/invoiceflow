@@ -16,17 +16,27 @@ function PaperSheet({ className }) {
   )
 }
 
+// Cores do ícone central: a da marca (vazio, não encontrado) ou a de erro.
+const TONES = {
+  default: { glow: "bg-primary/25", icon: "text-primary-ink", tint: "from-primary/10" },
+  danger: { glow: "bg-destructive/20", icon: "text-destructive", tint: "from-destructive/10" },
+}
+
 /**
  * Estado vazio de listas e seções: ilustração, título, descrição e ações.
+ * Com `tone="danger"`, o mesmo desenho serve de estado de erro.
  * @param {{
  *   icon: React.ComponentType<{ className?: string }>,
  *   title: string,
  *   description?: string,
+ *   tone?: "default" | "danger",
+ *   footer?: React.ReactNode,
  *   children?: React.ReactNode,
  *   className?: string,
- * }} props `children` recebe os botões de ação.
+ * }} props `children` recebe os botões de ação; `footer`, uma linha discreta embaixo deles.
  */
-export function EmptyState({ icon: Icon, title, description, children, className }) {
+export function EmptyState({ icon: Icon, title, description, tone = "default", footer, children, className }) {
+  const colors = TONES[tone] ?? TONES.default
   return (
     <div
       data-slot="empty-state"
@@ -43,11 +53,11 @@ export function EmptyState({ icon: Icon, title, description, children, className
 
       {/* Ilustração */}
       <div aria-hidden="true" className="relative mb-8 flex h-24 w-36 items-center justify-center">
-        <div className="absolute size-20 rounded-full bg-primary/25 blur-2xl" />
+        <div className={cn("absolute size-20 rounded-full blur-2xl", colors.glow)} />
         <PaperSheet className="left-1 top-3 -rotate-12 animate-float" />
         <PaperSheet className="right-1 top-3 rotate-12 animate-float-delayed" />
-        <div className="relative flex size-16 items-center justify-center rounded-2xl border bg-card text-primary-ink shadow-lg ring-4 ring-background">
-          <div className="absolute inset-0 rounded-2xl bg-linear-to-b from-primary/10 to-transparent" />
+        <div className={cn("relative flex size-16 items-center justify-center rounded-2xl border bg-card shadow-lg ring-4 ring-background", colors.icon)}>
+          <div className={cn("absolute inset-0 rounded-2xl bg-linear-to-b to-transparent", colors.tint)} />
           <Icon className="relative size-7" strokeWidth={1.75} />
         </div>
       </div>
@@ -61,6 +71,7 @@ export function EmptyState({ icon: Icon, title, description, children, className
       {children && (
         <div className="mt-7 flex flex-col items-center gap-2 sm:flex-row">{children}</div>
       )}
+      {footer && <div className="mt-6 text-xs text-muted-foreground">{footer}</div>}
     </div>
   )
 }
