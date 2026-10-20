@@ -85,19 +85,21 @@ function useOptionsWithCreated(options) {
  *   clients: Array<{ id: string, name: string, company: string|null, email: string|null }>,
  *   services: Array<{ id: string, name: string, description: string|null, unit: string, price_cents: number }>,
  *   issuer: { name: string, email?: string|null, phone?: string|null },
- *   quote?: { id: string, quote_number: string, created_at: string, updated_at: string } }} props
+ *   quote?: { id: string, quote_number: string, created_at: string, updated_at: string },
+ *   initialClientId?: string }} props
  *   `today` ("AAAA-MM-DD") calculado no servidor; `userId` separa os rascunhos locais por conta;
  *   `clients` para o seletor; `services` para o catálogo; `issuer` (getIssuer) para a
- *   pré-visualização; `quote` (getQuote) na edição.
+ *   pré-visualização; `quote` (getQuote) na edição; `initialClientId`: orçamento novo já
+ *   com o cliente escolhido (vindo da página do cliente).
  */
-export function QuoteForm({ today, userId, clients, services, issuer, quote }) {
+export function QuoteForm({ today, userId, clients, services, issuer, quote, initialClientId }) {
   const editing = Boolean(quote)
   const schema = useMemo(() => createQuoteSchema({ today }), [today])
   // Versão de partida: o orçamento em branco ou a versão salva. Memorizada,
   // porque o rascunho local compara cada alteração com ela.
   const baseValues = useMemo(
-    () => (quote ? toQuoteFormValues(quote) : createEmptyQuoteForm({ today })),
-    [quote, today],
+    () => (quote ? toQuoteFormValues(quote) : createEmptyQuoteForm({ today, clientId: initialClientId })),
+    [quote, today, initialClientId],
   )
   const form = useForm({
     resolver: zodResolver(schema),

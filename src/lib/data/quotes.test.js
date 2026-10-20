@@ -9,6 +9,7 @@ import {
   getQuote,
   getQuoteDocument,
   insertQuote,
+  listClientQuotes,
   listQuotes,
   sendQuote,
   toCreateQuoteParams,
@@ -350,6 +351,61 @@ describe("listQuotes", () => {
     const rpc = vi.fn(async () => ({ data: null, error: { code: "42883", message: "function does not exist" } }))
     getDataContext.mockResolvedValue({ user: { id: "u1" }, supabase: { rpc } })
     await expect(listQuotes()).rejects.toMatchObject({ code: "query_failed", message: "Não foi possível carregar os orçamentos." })
+    expect(log).toHaveBeenCalledOnce()
+  })
+})
+
+describe("listClientQuotes", () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  /** Consulta encadeada do supabase-js; guarda as chamadas e termina com `result`. */
+  function mockQuery(result) {
+    const calls = []
+    const query = {}
+    for (const method of ["select", "eq", "order"]) {
+      query[method] = vi.fn((...args) => {
+        calls.push([method, ...args])
+        return query
+      })
+    }
+    query.limit = vi.fn(async (...args) => {
+      calls.push(["limit", ...args])
+      return result
+    })
+    const from = vi.fn(() => query)
+    getDataContext.mockResolvedValue({ user: { id: "u1" }, supabase: { from } })
+    return { from, calls }
+  }
+
+  it("filtra pelo cliente e pelo dono, mais recentes primeiro, com o total", async () => {
+    const items = [{ id: "q1" }, { id: "q2" }]
+    const { from, calls } = mockQuery({ data: items, error: null, count: 14 })
+
+    await expect(listClientQuotes(CLIENT)).resolves.toEqual({ total: 14, items })
+    expect(from).toHaveBeenCalledWith("quotes")
+    expect(calls).toContainEqual(["select", expect.stringContaining("quote_number"), { count: "exact" }])
+    expect(calls).toContainEqual(["eq", "client_id", CLIENT])
+    expect(calls).toContainEqual(["eq", "user_id", "u1"])
+    expect(calls).toContainEqual(["order", "created_at", { ascending: false }])
+    expect(calls).toContainEqual(["order", "id"])
+    expect(calls).toContainEqual(["limit", 10])
+  })
+
+  it("id inválido ou modo demonstração → vazio, sem ir ao banco", async () => {
+    getDataContext.mockClear()
+    await expect(listClientQuotes("abc")).resolves.toEqual({ total: 0, items: [] })
+    isSupabaseConfigured.mockReturnValueOnce(false)
+    await expect(listClientQuotes(CLIENT)).resolves.toEqual({ total: 0, items: [] })
+    expect(getDataContext).not.toHaveBeenCalled()
+  })
+
+  it("erro do banco → mensagem amigável + log", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {})
+    mockQuery({ data: null, error: { code: "57014", message: "canceling statement" }, count: null })
+    await expect(listClientQuotes(CLIENT)).rejects.toMatchObject({
+      code: "query_failed",
+      message: "Não foi possível carregar os orçamentos do cliente.",
+    })
     expect(log).toHaveBeenCalledOnce()
   })
 })

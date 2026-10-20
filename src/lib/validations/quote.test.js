@@ -21,6 +21,13 @@ describe("createEmptyQuoteForm", () => {
     expect(form.items).toEqual([])
     expect(form.valid_until).toBe("2026-10-27")
     expect(form).toMatchObject({ discount_type: DISCOUNT_TYPE.NONE, discount_value: "", tax_enabled: false, tax_rate: "" })
+    expect(form.client_id).toBe("")
+  })
+
+  it("pode começar com o cliente escolhido (vindo da página do cliente)", () => {
+    const form = createEmptyQuoteForm({ today: "2026-10-12", clientId: "6f1c1d2e-0000-4000-8000-000000000001" })
+    expect(form.client_id).toBe("6f1c1d2e-0000-4000-8000-000000000001")
+    expect(form.items).toEqual([])
   })
 })
 

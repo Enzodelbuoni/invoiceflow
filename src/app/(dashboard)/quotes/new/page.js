@@ -8,13 +8,16 @@ import { todayIso } from "@/lib/dates"
 
 export const metadata = { title: "Novo orçamento" }
 
-export default async function NewQuotePage() {
-  const [user, clients, services, issuer] = await Promise.all([
+export default async function NewQuotePage({ searchParams }) {
+  const [user, clients, services, issuer, { cliente }] = await Promise.all([
     requireUser(),
     listClientOptions(),
     listServiceOptions(),
     getIssuer(),
+    searchParams,
   ])
+  // "Criar orçamento" na página do cliente (?cliente=<id>): só vale um cliente da própria lista.
+  const initialClientId = clients.find((client) => client.id === cliente)?.id
 
   return (
     <>
@@ -23,7 +26,7 @@ export default async function NewQuotePage() {
         title="Novo orçamento"
         description="Monte a proposta por etapas. O total é atualizado enquanto você preenche."
       />
-      <QuoteForm today={todayIso()} userId={user.id} clients={clients} services={services} issuer={issuer} />
+      <QuoteForm today={todayIso()} userId={user.id} clients={clients} services={services} issuer={issuer} initialClientId={initialClientId} />
     </>
   )
 }

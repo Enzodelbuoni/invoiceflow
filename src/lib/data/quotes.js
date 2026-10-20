@@ -198,6 +198,31 @@ export async function listQuotes({ query = "", statuses = null, since = null, so
   return data
 }
 
+/** Quantos orçamentos a página do cliente mostra (os mais recentes). */
+export const CLIENT_QUOTES_LIMIT = 10
+
+/**
+ * Orçamentos de um cliente (página do cliente): os `limit` mais recentes pela
+ * criação + quantos ele tem ao todo. Só o que a lista mostra; o filtro usa o
+ * índice quotes_client_id_idx.
+ * @returns {Promise<{ total: number, items: Array<{ id: string, quote_number: string, title: string,
+ *   status: string, total_cents: number, valid_until: string, sent_at: string | null, created_at: string }> }>}
+ */
+export async function listClientQuotes(clientId, { limit = CLIENT_QUOTES_LIMIT } = {}) {
+  if (!isSupabaseConfigured() || !isUuid(clientId)) return { total: 0, items: [] }
+  const { user, supabase } = await getDataContext()
+  const { data, error, count } = await supabase
+    .from("quotes")
+    .select("id, quote_number, title, status, total_cents, valid_until, sent_at, created_at", { count: "exact" })
+    .eq("client_id", clientId)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .order("id") // desempate: ordem estável entre recarregamentos
+    .limit(limit)
+  if (error) throw databaseError("quotes", "query_failed", "Não foi possível carregar os orçamentos do cliente.", error)
+  return { total: count ?? data.length, items: data }
+}
+
 // ── Status (Sprint 12) ───────────────────────────────────────────────
 
 /**

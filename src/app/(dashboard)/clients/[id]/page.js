@@ -3,7 +3,6 @@ import { notFound } from "next/navigation"
 import {
   ArrowLeftIcon,
   Building2Icon,
-  FileTextIcon,
   IdCardIcon,
   MailIcon,
   MapPinIcon,
@@ -15,10 +14,12 @@ import {
 
 import { ClientAvatar } from "@/components/clients/client-avatar"
 import { ClientDetailActions } from "@/components/clients/client-detail-actions"
-import { EmptyState } from "@/components/shared/empty-state"
+import { ClientQuotes } from "@/components/clients/client-quotes"
 import { Button } from "@/components/ui/button"
 import { formatDocument, formatPhone } from "@/lib/br"
 import { getClient } from "@/lib/data/clients"
+import { listClientQuotes } from "@/lib/data/quotes"
+import { todayIso } from "@/lib/dates"
 import { formatShortDate } from "@/lib/format"
 
 export async function generateMetadata({ params }) {
@@ -45,7 +46,7 @@ function InfoItem({ icon: Icon, label, children }) {
 
 export default async function ClientPage({ params }) {
   const { id } = await params
-  const client = await getClient(id)
+  const [client, quotes] = await Promise.all([getClient(id), listClientQuotes(id)])
   if (!client) notFound()
 
   const whatsappUrl = client.phone ? `https://wa.me/55${client.phone}` : null
@@ -136,11 +137,7 @@ export default async function ClientPage({ params }) {
         </section>
       </div>
 
-      <EmptyState
-        icon={FileTextIcon}
-        title="Nenhum orçamento ainda"
-        description={`Os orçamentos enviados para ${client.name} aparecerão aqui, com status e valores.`}
-      />
+      <ClientQuotes client={{ id: client.id, name: client.name }} total={quotes.total} quotes={quotes.items} today={todayIso()} />
     </>
   )
 }

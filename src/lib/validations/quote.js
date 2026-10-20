@@ -48,9 +48,9 @@ export { DISCOUNT_TYPE }
  * Valores iniciais de um orçamento novo. `today` ("AAAA-MM-DD", fuso de São
  * Paulo) vem do servidor, para servidor e navegador concordarem na data.
  */
-export function createEmptyQuoteForm({ today }) {
+export function createEmptyQuoteForm({ today, clientId = "" }) {
   return {
-    client_id: "",
+    client_id: clientId,
     title: "",
     description: "",
     valid_until: addDaysIso(today, DEFAULT_VALIDITY_DAYS),
