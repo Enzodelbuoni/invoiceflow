@@ -9,7 +9,7 @@ import { toast } from "sonner"
 
 import { approveQuoteAction } from "@/actions/public-quotes"
 import { FormAlert } from "@/components/auth/form-alert"
-import { OFFLINE_MESSAGE, ResponseSummary } from "@/components/public-quote/response-summary"
+import { ResponseSummary } from "@/components/public-quote/response-summary"
 import { TextField } from "@/components/shared/form-fields"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog"
 import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
+import { runAction } from "@/lib/action-client"
 import { cn } from "@/lib/utils"
 import { approveQuoteSchema, emptyApproveForm } from "@/lib/validations/quote-response"
 
@@ -99,13 +100,8 @@ function ApproveForm({ publicId, quote, clientEmail, onCancel, onBusyChange, onS
   async function onSubmit() {
     setFormError(null)
     onBusyChange(true)
-    let result
-    try {
-      // A action revalida com o mesmo schema; mandamos os valores crus do formulário.
-      result = await approveQuoteAction(publicId, form.getValues())
-    } catch {
-      result = { ok: false, message: OFFLINE_MESSAGE }
-    }
+    // A action revalida com o mesmo schema; mandamos os valores crus do formulário.
+    const result = await runAction(() => approveQuoteAction(publicId, form.getValues()))
     if (!result.ok) {
       onBusyChange(false)
       if (result.stale) {

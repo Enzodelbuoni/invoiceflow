@@ -1,8 +1,9 @@
+import { OFFLINE_MESSAGE } from "@/lib/action-client"
+
 // Baixar o PDF da proposta no navegador (Sprint 16, parte 2). Em vez de um link
 // direto, busca o arquivo com fetch: dá para mostrar "Gerando PDF…" (leva uns
 // segundos) e explicar o erro, quando houver.
 
-const OFFLINE = "Não foi possível falar com o servidor. Confira sua conexão e tente de novo."
 const FAILED = 'Não foi possível gerar o PDF. Tente de novo ou use "Imprimir".'
 
 /** 'attachment; filename="Proposta-2026-001.pdf"' → "Proposta-2026-001.pdf"; sem nome → null. */
@@ -20,7 +21,7 @@ export async function downloadPdf(url, fallbackName) {
   try {
     response = await fetch(url, { cache: "no-store" })
   } catch {
-    throw new Error(OFFLINE)
+    throw new Error(OFFLINE_MESSAGE)
   }
   if (!response.ok) {
     const isText = response.headers.get("Content-Type")?.startsWith("text/plain")

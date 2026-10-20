@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
+import { runAction } from "@/lib/action-client"
 
 /**
  * Confirmação de uma ação importante (enviar, cancelar, excluir…), controlada
@@ -55,12 +56,8 @@ export function ConfirmActionDialog({
   function handleConfirm() {
     setError(null)
     startTransition(async () => {
-      let result
-      try {
-        result = await action()
-      } catch {
-        result = { ok: false, message: "Não foi possível falar com o servidor. Confira sua conexão e tente de novo." }
-      }
+      // Sem conexão ou sessão expirada: a mensagem aparece no próprio diálogo.
+      const result = await runAction(action)
       if (!result.ok) {
         setError(result.message)
         return

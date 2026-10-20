@@ -2,8 +2,6 @@ import { formatCurrency } from "@/lib/money"
 
 // Peças comuns dos diálogos de resposta da página pública (aprovar/recusar).
 
-export const OFFLINE_MESSAGE = "Não foi possível falar com o servidor. Confira sua conexão e tente de novo."
-
 /** O que está sendo respondido: número, título e total da proposta. */
 export function ResponseSummary({ quote }) {
   return (

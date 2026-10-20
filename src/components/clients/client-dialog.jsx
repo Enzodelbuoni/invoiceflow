@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { runAction } from "@/lib/action-client"
 import { formatDocument, formatPhone } from "@/lib/br"
 import { EMPTY_CLIENT_FORM, clientSchema } from "@/lib/validations/client"
 
@@ -37,7 +38,8 @@ function QuickClientForm({ defaultName, onCreated, onCancel }) {
   async function onSubmit(values) {
     setFormError(null)
     // A action revalida com o mesmo schema; mandamos os valores crus do formulário.
-    const result = await createClientAction(form.getValues())
+    // runAction: sem conexão ou sessão expirada viram aviso (nada do que foi digitado se perde).
+    const result = await runAction(() => createClientAction(form.getValues()))
     if (!result.ok) {
       setFormError(result.message)
       for (const [field, message] of Object.entries(result.fieldErrors ?? {})) {

@@ -12,6 +12,7 @@ import { FormAlert } from "@/components/auth/form-alert"
 import { SubmitButton } from "@/components/auth/submit-button"
 import { CurrencyField, FormSection, SelectField, TextField, TextareaField } from "@/components/shared/form-fields"
 import { Button } from "@/components/ui/button"
+import { runAction } from "@/lib/action-client"
 import { SERVICE_UNIT_OPTIONS, formatServiceUnit } from "@/lib/constants/service-units"
 import { MAX_PRICE_CENTS, formatCurrency, parseCurrencyInput } from "@/lib/money"
 import { serviceSchema, toServiceFormValues } from "@/lib/validations/service"
@@ -68,7 +69,8 @@ export function ServiceForm({ service }) {
     setFormError(null)
     // A action revalida com o mesmo schema; mandamos os valores crus do formulário.
     const raw = form.getValues()
-    const result = isEdit ? await updateServiceAction(service.id, raw) : await createServiceAction(raw)
+    // runAction: sem conexão ou sessão expirada viram aviso (nada do que foi digitado se perde).
+    const result = await runAction(() => (isEdit ? updateServiceAction(service.id, raw) : createServiceAction(raw)))
 
     if (!result.ok) {
       setFormError(result.message)

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { getSafeRedirect, isProtectedPath } from "./redirect"
+import { getSafeRedirect, isProtectedPath, isServerActionRequest, loginPath } from "./redirect"
 
 describe("isProtectedPath", () => {
   it.each([
@@ -28,5 +28,25 @@ describe("getSafeRedirect", () => {
     [undefined, "/dashboard"],
   ])("%j → %j", (next, expected) => {
     expect(getSafeRedirect(next)).toBe(expected)
+  })
+})
+
+describe("loginPath", () => {
+  it.each([
+    ["/quotes/123?pagina=2", "/login?next=%2Fquotes%2F123%3Fpagina%3D2"],
+    ["/clients/new", "/login?next=%2Fclients%2Fnew"],
+    // destino externo ou inválido: login sem volta
+    ["//site.com", "/login"],
+    ["https://site.com", "/login"],
+    [undefined, "/login"],
+  ])("%j → %j", (next, expected) => {
+    expect(loginPath(next)).toBe(expected)
+  })
+})
+
+describe("isServerActionRequest", () => {
+  it("reconhece o cabeçalho Next-Action (o proxy não redireciona esses pedidos)", () => {
+    expect(isServerActionRequest(new Headers({ "Next-Action": "7f3a" }))).toBe(true)
+    expect(isServerActionRequest(new Headers({ accept: "text/html" }))).toBe(false)
   })
 })

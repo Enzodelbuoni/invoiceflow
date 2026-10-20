@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { runAction } from "@/lib/action-client"
 import { SERVICE_UNIT_OPTIONS } from "@/lib/constants/service-units"
 import { EMPTY_SERVICE_FORM, serviceSchema } from "@/lib/validations/service"
 
@@ -42,7 +43,8 @@ function QuickServiceForm({ defaultName, onCreated, onCancel }) {
   async function onSubmit(values) {
     setFormError(null)
     // A action revalida com o mesmo schema; mandamos os valores crus do formulário.
-    const result = await createServiceAction(form.getValues())
+    // runAction: sem conexão ou sessão expirada viram aviso (nada do que foi digitado se perde).
+    const result = await runAction(() => createServiceAction(form.getValues()))
     if (!result.ok) {
       setFormError(result.message)
       for (const [field, message] of Object.entries(result.fieldErrors ?? {})) {

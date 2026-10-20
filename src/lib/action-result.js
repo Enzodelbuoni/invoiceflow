@@ -3,8 +3,10 @@ import "server-only"
 import { DataError } from "@/lib/data/shared"
 
 // Formato de retorno das Server Actions:
-//   { ok: true, id? }  ou  { ok: false, message, fieldErrors? }
-// Nunca devolve erros técnicos ao navegador: só mensagens em pt-BR.
+//   { ok: true, id? }  ou  { ok: false, message, code?, fieldErrors? }
+// Nunca devolve erros técnicos ao navegador: só mensagens em pt-BR e, nos
+// erros previstos, o código do DataError (ex.: "unauthenticated" = sessão
+// expirada, que o navegador trata com o aviso "Entrar novamente").
 
 const UNEXPECTED = "Algo deu errado. Tente novamente em instantes."
 
@@ -28,8 +30,9 @@ export function parseInput(schema, values) {
 /** Erro → resposta amigável; o que não for DataError é registrado no log do servidor. */
 export function toFailure(scope, error) {
   if (error instanceof DataError) {
-    if (error.field) return { ok: false, message: error.message, fieldErrors: { [error.field]: error.message } }
-    return { ok: false, message: error.message }
+    const failure = { ok: false, message: error.message, code: error.code }
+    if (error.field) failure.fieldErrors = { [error.field]: error.message }
+    return failure
   }
   console.error(`[${scope}] erro inesperado:`, error)
   return { ok: false, message: UNEXPECTED }

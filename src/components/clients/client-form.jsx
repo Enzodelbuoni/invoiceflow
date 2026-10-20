@@ -12,6 +12,7 @@ import { FormAlert } from "@/components/auth/form-alert"
 import { SubmitButton } from "@/components/auth/submit-button"
 import { FormSection, TextField, TextareaField } from "@/components/shared/form-fields"
 import { Button } from "@/components/ui/button"
+import { runAction } from "@/lib/action-client"
 import { formatDocument, formatPhone } from "@/lib/br"
 import { clientSchema, toClientFormValues } from "@/lib/validations/client"
 
@@ -36,7 +37,8 @@ export function ClientForm({ client }) {
     setFormError(null)
     // A action revalida com o mesmo schema; mandamos os valores crus do formulário.
     const raw = form.getValues()
-    const result = isEdit ? await updateClientAction(client.id, raw) : await createClientAction(raw)
+    // runAction: sem conexão ou sessão expirada viram aviso (nada do que foi digitado se perde).
+    const result = await runAction(() => (isEdit ? updateClientAction(client.id, raw) : createClientAction(raw)))
 
     if (!result.ok) {
       setFormError(result.message)

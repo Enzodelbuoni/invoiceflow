@@ -9,7 +9,7 @@ import { toast } from "sonner"
 
 import { declineQuoteAction } from "@/actions/public-quotes"
 import { FormAlert } from "@/components/auth/form-alert"
-import { OFFLINE_MESSAGE, ResponseSummary } from "@/components/public-quote/response-summary"
+import { ResponseSummary } from "@/components/public-quote/response-summary"
 import { TextareaField } from "@/components/shared/form-fields"
 import { Button } from "@/components/ui/button"
 import {
@@ -22,6 +22,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Spinner } from "@/components/ui/spinner"
+import { runAction } from "@/lib/action-client"
 import { EMPTY_DECLINE_FORM, QUOTE_RESPONSE_LIMITS, declineQuoteSchema } from "@/lib/validations/quote-response"
 
 /** Formulário da recusa. Dentro do DialogContent: começa limpo a cada abertura. */
@@ -40,12 +41,7 @@ function DeclineForm({ publicId, quote, issuerName, onCancel, onBusyChange, onSt
   async function onSubmit() {
     setFormError(null)
     onBusyChange(true)
-    let result
-    try {
-      result = await declineQuoteAction(publicId, form.getValues())
-    } catch {
-      result = { ok: false, message: OFFLINE_MESSAGE }
-    }
+    const result = await runAction(() => declineQuoteAction(publicId, form.getValues()))
     if (!result.ok) {
       onBusyChange(false)
       if (result.stale) {

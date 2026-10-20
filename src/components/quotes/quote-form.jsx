@@ -19,6 +19,7 @@ import { QuoteSection } from "@/components/quotes/quote-section"
 import { QuoteSummary } from "@/components/quotes/quote-summary"
 import { QuoteTotalBar } from "@/components/quotes/quote-total-bar"
 import { useQuoteDraft } from "@/hooks/use-quote-draft"
+import { isSessionExpired, runAction } from "@/lib/action-client"
 import { countErrors, firstErrorPath } from "@/lib/form-errors"
 import { quoteDraftKey } from "@/lib/quote-draft"
 import { previewQuoteFromForm } from "@/lib/quote-preview"
@@ -149,19 +150,19 @@ export function QuoteForm({ today, userId, clients, services, issuer, quote, ini
   async function onValid() {
     // A action revalida com o mesmo schema e calcula os totais no servidor;
     // mandamos os valores crus do formulário.
-    let result
-    try {
-      const values = form.getValues()
-      result = editing
-        ? await updateQuoteAction(quote.id, quote.updated_at, values)
-        : await createQuoteAction(values)
-    } catch {
+    const values = form.getValues()
+    const result = await runAction(() =>
+      editing ? updateQuoteAction(quote.id, quote.updated_at, values) : createQuoteAction(values),
+    )
+    if (result.offline) {
       // Sem resposta do servidor (rede caiu, servidor fora do ar).
       toast.error("Não foi possível falar com o servidor", {
         description: `Confira sua conexão e tente de novo. ${keptLocally}`,
       })
       return
     }
+    // Sessão expirada: o aviso com "Entrar novamente" já está na tela, e o formulário continua aqui.
+    if (isSessionExpired(result)) return
 
     if (!result.ok) {
       const fieldErrors = Object.entries(result.fieldErrors ?? {})

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
 import { duplicateQuoteAction } from "@/actions/quotes"
+import { isSessionExpired, runAction } from "@/lib/action-client"
 
 /**
  * "Duplicar como novo rascunho": cria a cópia no servidor e abre a edição dela.
@@ -19,14 +20,11 @@ export function useDuplicateQuote() {
   function duplicate(quote) {
     startTransition(async () => {
       const toastId = toast.loading("Duplicando orçamento…")
-      let result
-      try {
-        result = await duplicateQuoteAction(quote.id)
-      } catch {
-        result = { ok: false, message: "Não foi possível falar com o servidor. Confira sua conexão e tente de novo." }
-      }
+      const result = await runAction(() => duplicateQuoteAction(quote.id))
       if (!result.ok) {
-        toast.error(result.message, { id: toastId })
+        // Sessão expirada: o aviso com "Entrar novamente" já está na tela.
+        if (isSessionExpired(result)) toast.dismiss(toastId)
+        else toast.error(result.message, { id: toastId })
         return
       }
       toast.success(`Rascunho ${result.quoteNumber} criado`, {

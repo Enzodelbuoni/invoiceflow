@@ -57,6 +57,7 @@ describe("toFailure", () => {
     expect(toFailure("services", new DataError("not_found", "Serviço não encontrado."))).toEqual({
       ok: false,
       message: "Serviço não encontrado.",
+      code: "not_found",
     })
     expect(log).not.toHaveBeenCalled()
   })
@@ -66,7 +67,16 @@ describe("toFailure", () => {
     expect(toFailure("quotes", error)).toEqual({
       ok: false,
       message: "Este cliente não existe mais.",
+      code: "client_missing",
       fieldErrors: { client_id: "Este cliente não existe mais." },
+    })
+  })
+
+  it("sessão expirada (getDataContext sem usuário) leva o código para o navegador", () => {
+    expect(toFailure("clients", new DataError("unauthenticated", "Sua sessão expirou. Entre novamente."))).toEqual({
+      ok: false,
+      message: "Sua sessão expirou. Entre novamente.",
+      code: "unauthenticated",
     })
   })
 

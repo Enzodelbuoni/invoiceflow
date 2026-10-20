@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse } from "next/server"
 
-import { DEFAULT_AFTER_LOGIN, GUEST_ONLY_PATHS, isProtectedPath } from "@/lib/auth/redirect"
+import { DEFAULT_AFTER_LOGIN, GUEST_ONLY_PATHS, isProtectedPath, isServerActionRequest, loginPath } from "@/lib/auth/redirect"
 import { isSupabaseConfigured } from "./env"
 
 // Redireciona preservando os cookies de sessão que o Supabase acabou de renovar.
@@ -51,11 +51,10 @@ export async function updateSession(request) {
 
   const { pathname, search } = request.nextUrl
 
-  if (!isLoggedIn && isProtectedPath(pathname)) {
-    const url = request.nextUrl.clone()
-    url.pathname = "/login"
-    url.search = `?next=${encodeURIComponent(pathname + search)}`
-    return redirectWithCookies(url, response)
+  // Server Actions passam: a action confere o login e responde "sessão expirada"
+  // (redirecionada, ela receberia a página de login no lugar da resposta).
+  if (!isLoggedIn && isProtectedPath(pathname) && !isServerActionRequest(request.headers)) {
+    return redirectWithCookies(new URL(loginPath(pathname + search), request.url), response)
   }
 
   if (isLoggedIn && GUEST_ONLY_PATHS.includes(pathname)) {

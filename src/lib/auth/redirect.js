@@ -8,6 +8,25 @@ export function isProtectedPath(pathname) {
   return PROTECTED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
 }
 
+/**
+ * Login que volta para `next` depois de entrar ("/quotes/123?pagina=2" →
+ * "/login?next=%2Fquotes%2F123%3Fpagina%3D2"). Sem destino interno válido, só "/login".
+ */
+export function loginPath(next) {
+  const target = getSafeRedirect(next, null)
+  return target ? `/login?next=${encodeURIComponent(target)}` : "/login"
+}
+
+/**
+ * Pedido de Server Action (POST com o cabeçalho Next-Action). O proxy não o
+ * redireciona para o login: o navegador seguiria o redirecionamento e receberia
+ * a página de login no lugar da resposta da action ("unexpected response").
+ * Quem confere o login nesses pedidos é a própria action (camada de dados).
+ */
+export function isServerActionRequest(headers) {
+  return headers.has("next-action")
+}
+
 const INTERNAL_ORIGIN = "http://invoiceflow.internal"
 
 /**
