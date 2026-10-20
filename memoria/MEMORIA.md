@@ -38,6 +38,9 @@ SaaS para freelancers criarem propostas/orçamentos profissionais: clientes, ser
 
 ## Próximo passo
 
+> **Onde paramos (fim de 2026-10-20):** etapa 36 concluída (levantamento + plano do Sprint 22), tudo commitado e publicado no GitHub. O usuário disse que continuamos "amanhã". **Começar pela etapa 37** (CI + logs seguros). Antes, como sempre: `git status` limpo, `projects list` (o Supabase pausa após ~7 dias sem uso) e `npm test`.
+
+
 1. **Sprint 22 — seguir a ordem combinada com o usuário em 2026-10-20** ([etapa-36](etapas/etapa-36-levantamento-sprint-22.md)):
    - **37** CI no GitHub Actions (lint + testes + build) + logs seguros (`toFailure` registra o erro inteiro nos inesperados) — o `git push` só quando o usuário pedir;
    - **38** configurações: perfil e dados do negócio (o emitente da proposta hoje é o perfil, sem tela para editar);
@@ -95,7 +98,7 @@ Pendente também: a **landing page `/`** continua provisória. Refazer antes do 
 - [ ] **Antes do deploy (PDF, etapa 24):** instalar o Chromium para Linux (`@sparticuz/chromium`, exige Node ≥ 22.17) e apontar o gerador para ele; `maxDuration` da rota `/quote/[publicId]/pdf`; liberar a página pública para o headless se houver proteção de deploy; **limitar a frequência de geração de PDF** (rota pública que abre um Chrome por pedido) ou fazer cache do arquivo.
 - [ ] **Antes do deploy:** evitar a pausa do plano Free (7 dias com pouca atividade), por exemplo com um ping agendado (GitHub Actions). Projeto pausado se reativa em **Resume project** (até 1 ano).
 - [x] ~~Projeto dentro do OneDrive~~ → resolvido na etapa 2 (movido para `C:\dev\invoiceflow`).
-- [x] ~~Criar repositório remoto no GitHub~~ → existe: `origin` = https://github.com/Enzodelbuoni/invoiceflow (branch `master`). Em 2026-10-19 o usuário pediu para publicar: enviados os commits até o Sprint 20 (antes o GitHub estava no Sprint 14). **Enviar (`git push`) só quando o usuário pedir.**
+- [x] ~~Criar repositório remoto no GitHub~~ → existe: `origin` = https://github.com/Enzodelbuoni/invoiceflow (branch `master`). Em 2026-10-19 o usuário pediu para publicar: enviados os commits até o Sprint 20 (antes o GitHub estava no Sprint 14). Em 2026-10-20, de novo a pedido dele: enviados os commits das etapas 32 a 36 (Sprint 21 completo + plano do Sprint 22). **Enviar (`git push`) só quando o usuário pedir.**
 - [ ] (Opcional, requer admin) Adicionar `C:\dev` às exclusões do Windows Defender para acelerar `npm install`/build. Não foi feito — só sugerido.
 
 ## Decisões técnicas (importante lembrar)
