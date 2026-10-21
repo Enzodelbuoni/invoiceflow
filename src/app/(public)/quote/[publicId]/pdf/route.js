@@ -3,6 +3,7 @@ import { after } from "next/server"
 import { getPublicQuote, registerQuoteDownload } from "@/lib/data/public-quotes"
 import { pdfFileName, pdfFooterTemplate } from "@/lib/pdf/document"
 import { isPdfAvailable, renderPdf } from "@/lib/pdf/render"
+import { logError } from "@/lib/safe-log"
 import { siteOrigin } from "@/lib/site-url"
 
 // PDF da proposta (Sprint 16, parte 2): /quote/<public_id>/pdf. Abre a página
@@ -52,7 +53,7 @@ export async function GET(_request, { params }) {
       },
     })
   } catch (error) {
-    console.error("[pdf] falha ao gerar:", error?.message ?? error)
+    logError("pdf", "falha ao gerar", error)
     return textResponse(500, 'Não foi possível gerar o PDF. Tente de novo ou use "Imprimir".')
   }
 }

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { parseInput, toFailure } from "./action-result"
-import { DataError, isUuid, sanitizeSearch } from "./data/shared"
+import { DataError, databaseError, isUuid, sanitizeSearch } from "./data/shared"
 import { createEmptyQuoteForm, createQuoteSchema } from "./validations/quote"
 import { serviceSchema } from "./validations/service"
 
@@ -87,6 +87,32 @@ describe("toFailure", () => {
       message: "Algo deu errado. Tente novamente em instantes.",
     })
     expect(log).toHaveBeenCalledOnce()
+  })
+
+  it("o log do erro inesperado não leva os dados da linha nem e-mails", () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {})
+    const error = {
+      code: "23505",
+      message: "duplicate key value violates unique constraint",
+      details: "Key (email)=(ana@empresa.com) already exists.",
+    }
+    toFailure("clients", error)
+    expect(log).toHaveBeenCalledWith("[clients] erro inesperado:", {
+      code: "23505",
+      message: "duplicate key value violates unique constraint",
+    })
+  })
+
+  it("databaseError registra só código e mensagem (sem details) e devolve o DataError", () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {})
+    const error = databaseError("clients.create", "save_failed", "Não foi possível salvar.", {
+      code: "23514",
+      message: "violates check constraint",
+      details: "Failing row contains (ana@empresa.com).",
+    })
+    expect(error).toBeInstanceOf(DataError)
+    expect(error).toMatchObject({ code: "save_failed", message: "Não foi possível salvar." })
+    expect(log).toHaveBeenCalledWith("[data:clients.create] save_failed:", { code: "23514", message: "violates check constraint" })
   })
 })
 

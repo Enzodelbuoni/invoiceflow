@@ -1,6 +1,7 @@
 import "server-only"
 
 import { DataError } from "@/lib/data/shared"
+import { logError } from "@/lib/safe-log"
 
 // Formato de retorno das Server Actions:
 //   { ok: true, id? }  ou  { ok: false, message, code?, fieldErrors? }
@@ -27,13 +28,16 @@ export function parseInput(schema, values) {
   return { failure: { ok: false, message: "Confira os campos destacados.", fieldErrors } }
 }
 
-/** Erro → resposta amigável; o que não for DataError é registrado no log do servidor. */
+/**
+ * Erro → resposta amigável; o que não for DataError vai para o log do servidor
+ * pelo resumo seguro (`logError`), nunca o objeto inteiro.
+ */
 export function toFailure(scope, error) {
   if (error instanceof DataError) {
     const failure = { ok: false, message: error.message, code: error.code }
     if (error.field) failure.fieldErrors = { [error.field]: error.message }
     return failure
   }
-  console.error(`[${scope}] erro inesperado:`, error)
+  logError(scope, "erro inesperado", error)
   return { ok: false, message: UNEXPECTED }
 }

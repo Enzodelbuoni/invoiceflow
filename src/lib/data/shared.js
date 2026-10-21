@@ -1,6 +1,7 @@
 import "server-only"
 
 import { getCurrentUser } from "@/lib/auth/server"
+import { logError } from "@/lib/safe-log"
 import { isSupabaseConfigured } from "@/lib/supabase/env"
 import { createClient } from "@/lib/supabase/server"
 
@@ -28,7 +29,7 @@ export class DataError extends Error {
  * dados da linha).
  */
 export function databaseError(scope, code, message, error) {
-  console.error(`[data:${scope}] ${code}:`, error?.code ?? "?", error?.message ?? "")
+  logError(`data:${scope}`, code, error, { stack: false })
   return new DataError(code, message)
 }
 
