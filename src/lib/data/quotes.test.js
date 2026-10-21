@@ -229,35 +229,66 @@ describe("getQuote", () => {
 })
 
 describe("getQuoteDocument", () => {
-  function mockRow(row) {
-    const maybeSingle = vi.fn(async () => ({ data: row, error: null }))
-    const builder = { select: () => builder, eq: () => builder, maybeSingle }
+  /** Uma linha por tabela: o orçamento (quotes) e o perfil com o negócio (profiles, do getIssuer). */
+  function mockRows(rows) {
+    const builderFor = (table) => {
+      const builder = { select: () => builder, eq: () => builder, maybeSingle: async () => ({ data: rows[table], error: null }) }
+      return builder
+    }
     getDataContext.mockResolvedValue({
       user: { id: "u1", name: "Ana (do cadastro)", email: "ana@exemplo.com" },
-      supabase: { from: () => builder },
+      supabase: { from: builderFor },
     })
   }
 
   it("separa orçamento, cliente e emitente, com os itens em ordem", async () => {
-    mockRow({
-      id: "6f1c1d2e-0000-4000-8000-0000000000f3",
-      quote_number: "2026-001",
-      items: [{ position: 1, name: "B" }, { position: 0, name: "A" }],
-      client: { name: "Cliente" },
-      issuer: { full_name: "Ana Souza", email: "ana@exemplo.com", phone: "11999998888" },
+    mockRows({
+      quotes: {
+        id: "6f1c1d2e-0000-4000-8000-0000000000f3",
+        quote_number: "2026-001",
+        items: [{ position: 1, name: "B" }, { position: 0, name: "A" }],
+        client: { name: "Cliente" },
+      },
+      profiles: { full_name: "Ana Souza", email: "ana@exemplo.com", phone: "11999998888", business: null },
     })
     const { quote, client, issuer } = await getQuoteDocument("6f1c1d2e-0000-4000-8000-0000000000f3")
     expect(quote).not.toHaveProperty("client")
-    expect(quote).not.toHaveProperty("issuer")
     expect(quote.items.map((item) => item.name)).toEqual(["A", "B"])
     expect(client).toEqual({ name: "Cliente" })
-    expect(issuer).toEqual({ name: "Ana Souza", email: "ana@exemplo.com", phone: "11999998888" })
+    expect(issuer).toEqual({
+      name: "Ana Souza",
+      legal_name: null,
+      document: null,
+      email: "ana@exemplo.com",
+      phone: "11999998888",
+      website: null,
+      address: null,
+    })
+  })
+
+  it("com dados do negócio: eles vencem o perfil", async () => {
+    mockRows({
+      quotes: { id: "x", items: [], client: null },
+      profiles: {
+        full_name: "Ana Souza",
+        email: "ana@exemplo.com",
+        phone: null,
+        business: { name: "Estúdio Aurora", legal_name: null, document: "11222333000181", email: "oi@aurora.com", phone: null, website: null, address: null },
+      },
+    })
+    const { issuer } = await getQuoteDocument("6f1c1d2e-0000-4000-8000-0000000000f4")
+    expect(issuer).toMatchObject({ name: "Estúdio Aurora", document: "11222333000181", email: "oi@aurora.com" })
   })
 
   it("perfil sem nome: usa o nome de exibição do usuário", async () => {
-    mockRow({ id: "x", items: [], client: null, issuer: { full_name: "", email: "ana@exemplo.com", phone: null } })
+    mockRows({ quotes: { id: "x", items: [], client: null }, profiles: { full_name: "", email: "ana@exemplo.com", phone: null, business: null } })
     const { issuer } = await getQuoteDocument("6f1c1d2e-0000-4000-8000-0000000000f4")
     expect(issuer.name).toBe("Ana (do cadastro)")
+  })
+
+  it("orçamento que não existe: null", async () => {
+    mockRows({ quotes: null, profiles: { full_name: "Ana", email: "ana@exemplo.com", phone: null, business: null } })
+    expect(await getQuoteDocument("6f1c1d2e-0000-4000-8000-0000000000f5")).toBeNull()
   })
 })
 

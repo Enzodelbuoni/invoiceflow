@@ -2,6 +2,7 @@ import "server-only"
 import { cache } from "react"
 
 import { calculateQuoteTotals } from "@/lib/calculations/quote"
+import { getIssuer } from "@/lib/data/profiles"
 import { DataError, databaseError, getDataContext, isUuid } from "@/lib/data/shared"
 import { todayIso } from "@/lib/dates"
 import { toQuoteCopy } from "@/lib/quote-copy"
@@ -20,13 +21,13 @@ const QUOTE_COLUMNS = [
   "items:quote_items(position, service_id, name, description, quantity_hundredths, unit, unit_price_cents, subtotal_cents)",
 ].join(", ")
 
-// Documento (QuotePreview): o orçamento + os dados do cliente e do emitente que
-// aparecem na proposta. Só no servidor (a edição não recebe estes dados).
+// Documento (QuotePreview): o orçamento + os dados do cliente que aparecem na
+// proposta (o emitente vem de getIssuer). Só no servidor (a edição não recebe
+// estes dados).
 const DOCUMENT_COLUMNS = [
   QUOTE_COLUMNS,
   "public_id, sent_at",
   "client:clients(name, company, email, phone, document, address)",
-  "issuer:profiles(full_name, email, phone)",
 ].join(", ")
 
 /** Itens na ordem de position (o join do PostgREST não garante a ordem). */
@@ -147,26 +148,20 @@ export const getQuote = cache(async (id) => {
 
 /**
  * Tudo o que o documento do orçamento mostra: `{ quote, client, issuer }`, ou
- * `null` se não existir (ou for de outra pessoa). O emitente é o perfil do
- * usuário (os dados da empresa chegam com /settings/business).
+ * `null` se não existir (ou for de outra pessoa). O emitente é o do usuário
+ * (negócio + perfil, getIssuer), o mesmo que a página pública mostra.
  */
 export const getQuoteDocument = cache(async (id) => {
   if (!isUuid(id)) return null
   const { user, supabase } = await getDataContext()
-  const { data, error } = await supabase
-    .from("quotes")
-    .select(DOCUMENT_COLUMNS)
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .maybeSingle()
+  const [{ data, error }, issuer] = await Promise.all([
+    supabase.from("quotes").select(DOCUMENT_COLUMNS).eq("id", id).eq("user_id", user.id).maybeSingle(),
+    getIssuer(),
+  ])
   if (error) throw databaseError("quotes", "query_failed", "Não foi possível carregar o orçamento.", error)
   if (!data) return null
-  const { client, issuer, ...quote } = data
-  return {
-    quote: { ...quote, items: byPosition(quote.items) },
-    client,
-    issuer: { name: issuer?.full_name || user.name, email: issuer?.email ?? user.email ?? null, phone: issuer?.phone ?? null },
-  }
+  const { client, ...quote } = data
+  return { quote: { ...quote, items: byPosition(quote.items) }, client, issuer }
 })
 
 /**

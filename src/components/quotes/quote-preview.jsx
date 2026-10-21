@@ -1,3 +1,4 @@
+import { Fragment } from "react"
 import { CircleCheckIcon } from "lucide-react"
 
 import { formatDocument, formatPhone } from "@/lib/br"
@@ -10,6 +11,7 @@ import { formatCurrency } from "@/lib/money"
 import { formatPercentValue } from "@/lib/percent"
 import { formatQuantity, quantityToNumber } from "@/lib/quantity"
 import { cn } from "@/lib/utils"
+import { displayWebsite } from "@/lib/website"
 
 // Documento do orçamento (QuotePreview do plano, Sprint 11). Um componente só
 // para a visualização interna, a página pública (Sprint 14) e o PDF (Sprint 16):
@@ -39,25 +41,67 @@ function Eyebrow({ children, className }) {
   )
 }
 
+/** "CNPJ 11.222.333/0001-81" ou "CPF 123.456.789-09". */
+const documentLine = (document) => `${document.length === 14 ? "CNPJ" : "CPF"} ${formatDocument(document)}`
+
+/**
+ * Quem envia a proposta: iniciais, nome e as linhas de contato, razão social /
+ * documento e endereço (as que estiverem preenchidas). Exportado para a prévia
+ * de Configurações → Negócio.
+ * @param {{ issuer: { name: string, legal_name?: string|null, document?: string|null, email?: string|null,
+ *   phone?: string|null, website?: string|null, address?: string|null } }} props
+ */
+export function IssuerIdentity({ issuer }) {
+  // Cada parte é [texto, nowrap]: telefone e documento não quebram no meio; e-mail
+  // e site (sem espaços) quebram onde precisar. A quebra cai entre as partes.
+  const lines = [
+    [
+      [issuer.email, false],
+      [issuer.phone && formatPhone(issuer.phone), true],
+      [issuer.website && displayWebsite(issuer.website), false],
+    ],
+    [
+      [issuer.legal_name, false],
+      [issuer.document && documentLine(issuer.document), true],
+    ],
+  ]
+    .map((parts) => parts.filter(([text]) => text))
+    .filter((parts) => parts.length > 0)
+  return (
+    <div className="flex min-w-0 items-start gap-3.5">
+      <span
+        aria-hidden="true"
+        className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-semibold tracking-wide text-primary-foreground"
+      >
+        {initials(issuer.name)}
+      </span>
+      <div className="flex min-w-0 flex-col">
+        <p className="truncate font-display text-2xl leading-tight">{issuer.name}</p>
+        {lines.map((parts) => (
+          <p key={parts[0][0]} className="text-sm text-muted-foreground">
+            {parts.map(([text, nowrap], index) => (
+              <Fragment key={text}>
+                {/* Espaço inseparável antes do ponto: a linha nunca começa com "·". */}
+                {index > 0 && " · "}
+                <span className={nowrap ? "whitespace-nowrap" : "wrap-anywhere"}>{text}</span>
+              </Fragment>
+            ))}
+          </p>
+        ))}
+        {issuer.address && <p className="text-sm wrap-anywhere text-muted-foreground">{issuer.address}</p>}
+      </div>
+    </div>
+  )
+}
+
 function Header({ quote, issuer, label }) {
-  const contact = [issuer.email, issuer.phone && formatPhone(issuer.phone)].filter(Boolean)
   const issued = quote.sent_at ?? quote.created_at
   return (
     <header className="flex flex-col gap-6 break-inside-avoid @xl:flex-row @xl:items-start @xl:justify-between">
-      <div className="flex min-w-0 items-center gap-3.5">
-        <span
-          aria-hidden="true"
-          className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-semibold tracking-wide text-primary-foreground"
-        >
-          {initials(issuer.name)}
-        </span>
-        <div className="flex min-w-0 flex-col">
-          <p className="truncate font-display text-2xl leading-tight">{issuer.name}</p>
-          {contact.length > 0 && <p className="truncate text-sm text-muted-foreground">{contact.join(" · ")}</p>}
-        </div>
-      </div>
+      <IssuerIdentity issuer={issuer} />
 
-      <div className="flex flex-col gap-2 @xl:items-end @xl:text-right">
+      {/* shrink-0: um endereço longo à esquerda não espreme o número da proposta. */}
+      <div className="flex shrink-0 flex-col gap-2 @xl:items-end @xl:text-right">
         <div className="flex items-center gap-2 @xl:flex-row-reverse">
           <Eyebrow>Proposta comercial</Eyebrow>
           {label && (
@@ -92,7 +136,7 @@ function ClientCard({ client }) {
     )
   }
   const lines = [
-    client.document && `${client.document.length === 14 ? "CNPJ" : "CPF"} ${formatDocument(client.document)}`,
+    client.document && documentLine(client.document),
     client.email,
     client.phone && formatPhone(client.phone),
   ].filter(Boolean)
@@ -312,7 +356,8 @@ function Acceptance({ acceptance }) {
  *       unit_price_cents: number, subtotal_cents: number }> },
  *   client: { name: string, company?: string|null, email?: string|null, phone?: string|null,
  *     document?: string|null, address?: string|null } | null,
- *   issuer: { name: string, email?: string|null, phone?: string|null },
+ *   issuer: { name: string, legal_name?: string|null, document?: string|null, email?: string|null,
+ *     phone?: string|null, website?: string|null, address?: string|null },
  *   label?: string,
  *   acceptance?: { signer_name: string, responded_at: string } | null,
  *   className?: string,
