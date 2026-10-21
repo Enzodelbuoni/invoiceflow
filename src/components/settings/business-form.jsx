@@ -8,33 +8,25 @@ import { toast } from "sonner"
 import { saveBusinessAction } from "@/actions/settings"
 import { FormAlert } from "@/components/auth/form-alert"
 import { SubmitButton } from "@/components/auth/submit-button"
-import { IssuerIdentity } from "@/components/quotes/quote-preview"
+import { PaperPreview } from "@/components/settings/paper-preview"
 import { FormSection, TextField } from "@/components/shared/form-fields"
 import { runAction } from "@/lib/action-client"
 import { formatDocument, formatPhone } from "@/lib/br"
 import { toIssuer } from "@/lib/issuer"
 import { businessFromForm, businessSchema, toBusinessFormValues } from "@/lib/validations/settings"
 
-/** Cabeçalho da proposta como ficaria com o que está no formulário agora. */
-function IssuerPreview({ control, profile, fallbackName }) {
+/**
+ * Cabeçalho da proposta como ficaria com o que está no formulário agora (com o
+ * logo e a cor já salvos em Identidade visual).
+ */
+function IssuerPreview({ control, profile, branding, fallbackName }) {
   const values = useWatch({ control })
-  const issuer = toIssuer({ profile, business: businessFromForm(values), fallbackName })
+  const issuer = toIssuer({ profile, business: { ...businessFromForm(values), ...branding }, fallbackName })
   return (
-    <aside aria-labelledby="issuer-preview-title" className="flex flex-col gap-3 @4xl:sticky @4xl:top-20">
-      <h2 id="issuer-preview-title" className="text-sm font-medium">
-        Como aparece na proposta
-      </h2>
-      {/* Papel sempre claro, como o cliente recebe (o mesmo bloco do documento). */}
-      <div className="theme-paper overflow-hidden rounded-md shadow-lg ring-1 ring-black/5">
-        <div aria-hidden="true" className="h-1.5 bg-primary" />
-        <div className="p-5">
-          <IssuerIdentity issuer={issuer} />
-        </div>
-      </div>
-      <p className="text-xs text-pretty text-muted-foreground">
-        Vale para todas as propostas, inclusive as já enviadas: na página que o cliente abre e no PDF.
-      </p>
-    </aside>
+    <PaperPreview
+      issuer={issuer}
+      footnote="Vale para todas as propostas, inclusive as já enviadas: na página que o cliente abre e no PDF."
+    />
   )
 }
 
@@ -130,7 +122,12 @@ export function BusinessForm({ business, profile, fallbackName }) {
           </div>
         </form>
 
-        <IssuerPreview control={form.control} profile={profile} fallbackName={fallbackName} />
+        <IssuerPreview
+          control={form.control}
+          profile={profile}
+          branding={{ logo_path: business?.logo_path ?? null, accent_color: business?.accent_color ?? null }}
+          fallbackName={fallbackName}
+        />
       </div>
     </div>
   )

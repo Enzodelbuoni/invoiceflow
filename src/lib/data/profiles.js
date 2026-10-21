@@ -9,7 +9,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env"
 // Perfil do usuário logado (a pessoa) e o emitente das propostas, que junta o
 // perfil com os dados do negócio (tabela businesses, etapa 38).
 
-const BUSINESS_COLUMNS = "name, legal_name, document, email, phone, website, address"
+const BUSINESS_COLUMNS = "name, legal_name, document, email, phone, website, address, logo_path, accent_color"
 
 /** `{ full_name, email, phone }` do usuário logado. */
 export const getProfile = cache(async () => {

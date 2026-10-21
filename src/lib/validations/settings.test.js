@@ -1,11 +1,12 @@
-import { readFileSync } from "node:fs"
+import { readdirSync, readFileSync } from "node:fs"
 
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
-import { toIssuer } from "@/lib/issuer"
+import { toIssuer, withLogoUrl } from "@/lib/issuer"
 
 import {
   EMPTY_BUSINESS_FORM,
+  accentSchema,
   businessFromForm,
   businessSchema,
   profileSchema,
@@ -13,8 +14,16 @@ import {
   toProfileFormValues,
 } from "./settings"
 
-const migration = (name) =>
-  readFileSync(new URL(`../../../supabase/migrations/${name}`, import.meta.url), "utf8")
+const MIGRATIONS = new URL("../../../supabase/migrations/", import.meta.url)
+const migration = (name) => readFileSync(new URL(name, MIGRATIONS), "utf8")
+
+/** A migração mais recente que contém `text` (a definição em vigor de uma função). */
+const latestMigrationWith = (text) =>
+  readdirSync(MIGRATIONS)
+    .sort()
+    .reverse()
+    .map(migration)
+    .find((sql) => sql.includes(text))
 
 const errors = (schema, values) =>
   Object.fromEntries(schema.safeParse(values).error.issues.map((issue) => [issue.path.join("."), issue.message]))
@@ -154,6 +163,8 @@ describe("toIssuer (mesma regra da get_public_quote)", () => {
       phone: "11912345678",
       website: null,
       address: null,
+      logo_url: null,
+      accent_color: null,
     })
   })
 
@@ -172,10 +183,44 @@ describe("toIssuer (mesma regra da get_public_quote)", () => {
     expect(toIssuer({ fallbackName: "Você" })).toMatchObject({ name: "Você", email: null })
   })
 
-  it("a get_public_quote aplica a mesma ordem (negócio, perfil, início do e-mail)", () => {
-    const sql = migration("20261021161431_business_settings.sql")
+  it("a get_public_quote (a versão mais recente) aplica a mesma ordem e leva logo e cor", () => {
+    const sql = latestMigrationWith("function public.get_public_quote")
     expect(sql).toMatch(/coalesce\(nullif\(btrim\(b\.name\), ''\), nullif\(btrim\(p\.full_name\), ''\), split_part\(p\.email, '@', 1\)\)/)
     expect(sql).toMatch(/'email', coalesce\(b\.email, p\.email\)/)
     expect(sql).toMatch(/'phone', coalesce\(b\.phone, p\.phone\)/)
+    expect(sql).toMatch(/'logo_path', b\.logo_path/)
+    expect(sql).toMatch(/'accent_color', b\.accent_color/)
+  })
+})
+
+describe("withLogoUrl (emitente da página pública)", () => {
+  it("troca o caminho do logo pela URL pública", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://abc.supabase.co")
+    expect(withLogoUrl({ name: "Aurora", logo_path: "u1/logo-1.webp", accent_color: "#0f766e" })).toEqual({
+      name: "Aurora",
+      logo_url: "https://abc.supabase.co/storage/v1/object/public/logos/u1/logo-1.webp",
+      accent_color: "#0f766e",
+    })
+    expect(withLogoUrl({ name: "Aurora", logo_path: null })).toEqual({ name: "Aurora", logo_url: null })
+    expect(withLogoUrl(null)).toBeNull()
+    vi.unstubAllEnvs()
+  })
+})
+
+describe("accentSchema", () => {
+  it.each([
+    ["", null],
+    ["#0F766E", "#0f766e"],
+    ["0f766e", "#0f766e"],
+  ])("%j → %j", (accent_color, expected) => {
+    expect(accentSchema.parse({ accent_color })).toEqual({ accent_color: expected })
+  })
+
+  it("cor inválida é recusada", () => {
+    expect(errors(accentSchema, { accent_color: "vermelho" })).toEqual({ accent_color: "Escolha uma cor válida, como #0f766e." })
+  })
+
+  it("o formato é o mesmo do CHECK do banco", () => {
+    expect(migration("20261021170258_branding.sql")).toMatch(/accent_color ~ '\^#\[0-9a-f\]\{6\}\$'/)
   })
 })

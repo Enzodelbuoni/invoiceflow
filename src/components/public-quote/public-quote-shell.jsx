@@ -2,6 +2,7 @@ import Link from "next/link"
 import { ArrowLeftIcon, EyeIcon } from "lucide-react"
 
 import { LogoWordmark } from "@/components/brand/logo"
+import { accentPageCss } from "@/lib/accent"
 import { initials } from "@/lib/initials"
 
 /**
@@ -31,21 +32,35 @@ function OwnerNotice() {
 /**
  * Moldura das páginas públicas da proposta (a proposta e as confirmações de
  * aprovação/recusa): cabeçalho com quem enviou, conteúdo e rodapé.
- * @param {{ issuer: { name: string }, quoteNumber: string, viewerIsOwner?: boolean,
+ * @param {{ issuer: { name: string, logo_url?: string|null, accent_color?: string|null }, quoteNumber: string,
+ *   viewerIsOwner?: boolean,
  *   children: React.ReactNode, mainClassName?: string }} props
  */
 export function PublicQuoteShell({ issuer, quoteNumber, viewerIsOwner = false, children, mainClassName }) {
+  // Cor do negócio nos botões e destaques da página (inclusive nos diálogos, em portal).
+  const accentCss = accentPageCss(issuer.accent_color)
   return (
     <div className="flex min-h-svh flex-col bg-muted/50 print:bg-transparent! dark:bg-background">
+      {accentCss && <style>{accentCss}</style>}
       {viewerIsOwner && <OwnerNotice />}
       <header className="border-b bg-background print:hidden">
         <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-3 sm:px-6">
-          <span
-            aria-hidden="true"
-            className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-semibold tracking-wide text-primary-foreground"
-          >
-            {initials(issuer.name)}
-          </span>
+          {issuer.logo_url ? (
+            // No tema escuro, o logo vai num fundo branco (quase todo logo é feito para fundo claro).
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={issuer.logo_url}
+              alt=""
+              className="h-9 w-auto max-w-28 shrink-0 object-contain dark:rounded-md dark:bg-white dark:p-1"
+            />
+          ) : (
+            <span
+              aria-hidden="true"
+              className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-semibold tracking-wide text-primary-foreground"
+            >
+              {initials(issuer.name)}
+            </span>
+          )}
           <div className="flex min-w-0 flex-col">
             <p className="truncate font-medium">{issuer.name}</p>
             <p className="truncate text-xs text-muted-foreground">Proposta Nº {quoteNumber}</p>

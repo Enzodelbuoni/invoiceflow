@@ -2,6 +2,7 @@ import "server-only"
 import { cache } from "react"
 
 import { DataError, databaseError } from "@/lib/data/shared"
+import { withLogoUrl } from "@/lib/issuer"
 import { isSupabaseConfigured } from "@/lib/supabase/env"
 import { createClient } from "@/lib/supabase/server"
 import { isUuid } from "@/lib/uuid"
@@ -24,7 +25,8 @@ export const getPublicQuote = cache(async (publicId) => {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc("get_public_quote", { p_public_id: publicId })
   if (error) throw databaseError("public-quotes", "query_failed", "Não foi possível carregar a proposta.", error)
-  return data ?? null
+  // O banco devolve o caminho do logo; a página precisa da URL pública.
+  return data ? { ...data, issuer: withLogoUrl(data.issuer) } : null
 })
 
 /** Primeira visita do cliente: enviado → visualizado (o banco decide se conta). */

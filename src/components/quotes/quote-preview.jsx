@@ -1,6 +1,7 @@
 import { Fragment } from "react"
 import { CircleCheckIcon } from "lucide-react"
 
+import { accentStyle } from "@/lib/accent"
 import { formatDocument, formatPhone } from "@/lib/br"
 import { DISCOUNT_TYPE } from "@/lib/constants/discount-types"
 import { formatServiceUnit } from "@/lib/constants/service-units"
@@ -33,7 +34,8 @@ function quantityLabel(item) {
   return `${formatQuantity(item.quantity_hundredths)} ${unit}`.trim()
 }
 
-function Eyebrow({ children, className }) {
+/** Rótulo em versalete na cor de destaque (tom legível). */
+export function Eyebrow({ children, className }) {
   return (
     <p className={cn("text-[0.6875rem] font-semibold tracking-[0.16em] text-primary-ink uppercase", className)}>
       {children}
@@ -45,11 +47,11 @@ function Eyebrow({ children, className }) {
 const documentLine = (document) => `${document.length === 14 ? "CNPJ" : "CPF"} ${formatDocument(document)}`
 
 /**
- * Quem envia a proposta: iniciais, nome e as linhas de contato, razão social /
- * documento e endereço (as que estiverem preenchidas). Exportado para a prévia
- * de Configurações → Negócio.
+ * Quem envia a proposta: logo (ou iniciais), nome e as linhas de contato, razão
+ * social / documento e endereço (as que estiverem preenchidas). Exportado para
+ * as prévias de Configurações (Negócio e Identidade visual).
  * @param {{ issuer: { name: string, legal_name?: string|null, document?: string|null, email?: string|null,
- *   phone?: string|null, website?: string|null, address?: string|null } }} props
+ *   phone?: string|null, website?: string|null, address?: string|null, logo_url?: string|null } }} props
  */
 export function IssuerIdentity({ issuer }) {
   // Cada parte é [texto, nowrap]: telefone e documento não quebram no meio; e-mail
@@ -68,21 +70,30 @@ export function IssuerIdentity({ issuer }) {
     .map((parts) => parts.filter(([text]) => text))
     .filter((parts) => parts.length > 0)
   return (
-    <div className="flex min-w-0 items-start gap-3.5">
-      <span
-        aria-hidden="true"
-        className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-semibold tracking-wide text-primary-foreground"
-      >
-        {initials(issuer.name)}
-      </span>
-      <div className="flex min-w-0 flex-col">
+    // Com logo: ele em cima e o nome embaixo (serve para logo quadrado e largo).
+    // Sem logo: as iniciais ao lado do nome, no tom legível da cor de destaque.
+    <div className={cn("flex min-w-0 items-start", issuer.logo_url ? "flex-col gap-3" : "gap-3.5")}>
+      {issuer.logo_url ? (
+        // <img> e não next/image: o arquivo já foi reduzido no envio (WebP ≤ 512 px) e
+        // o PDF abre a página sem JavaScript. alt vazio: o nome vem logo abaixo.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={issuer.logo_url} alt="" className="h-12 w-auto max-w-48 object-contain object-left" />
+      ) : (
+        <span
+          aria-hidden="true"
+          className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary-ink text-sm font-semibold tracking-wide text-primary-foreground"
+        >
+          {initials(issuer.name)}
+        </span>
+      )}
+      <div className="flex max-w-full min-w-0 flex-col">
         <p className="truncate font-display text-2xl leading-tight">{issuer.name}</p>
         {lines.map((parts) => (
           <p key={parts[0][0]} className="text-sm text-muted-foreground">
             {parts.map(([text, nowrap], index) => (
               <Fragment key={text}>
                 {/* Espaço inseparável antes do ponto: a linha nunca começa com "·". */}
-                {index > 0 && " · "}
+                {index > 0 && "\u00a0· "}
                 <span className={nowrap ? "whitespace-nowrap" : "wrap-anywhere"}>{text}</span>
               </Fragment>
             ))}
@@ -357,7 +368,8 @@ function Acceptance({ acceptance }) {
  *   client: { name: string, company?: string|null, email?: string|null, phone?: string|null,
  *     document?: string|null, address?: string|null } | null,
  *   issuer: { name: string, legal_name?: string|null, document?: string|null, email?: string|null,
- *     phone?: string|null, website?: string|null, address?: string|null },
+ *     phone?: string|null, website?: string|null, address?: string|null, logo_url?: string|null,
+ *     accent_color?: string|null },
  *   label?: string,
  *   acceptance?: { signer_name: string, responded_at: string } | null,
  *   className?: string,
@@ -370,6 +382,8 @@ export function QuotePreview({ quote, client, issuer, label, acceptance, classNa
   return (
     <article
       aria-label={quote.quote_number ? `Proposta Nº ${quote.quote_number}` : "Prévia da proposta"}
+      // Cor de destaque do negócio (etapa 39): troca --primary / --primary-ink só no papel.
+      style={accentStyle(issuer.accent_color)}
       className={cn(
         "theme-paper @container mx-auto w-full max-w-[52rem] overflow-hidden rounded-md shadow-xl ring-1 ring-black/5",
         // Impressão: a folha já é o papel (sem moldura, sombra nem limite de largura).
@@ -377,7 +391,7 @@ export function QuotePreview({ quote, client, issuer, label, acceptance, classNa
         className,
       )}
     >
-      {/* Faixa da marca no topo (a cor será personalizável no Sprint de identidade visual). */}
+      {/* Faixa no topo, na cor de destaque do negócio. */}
       <div aria-hidden="true" className="h-1.5 bg-primary" />
 
       <div className="flex flex-col gap-9 px-5 py-7 @xl:gap-10 @xl:px-12 @xl:py-12 print:gap-6! print:px-0! print:pt-6! print:pb-0!">

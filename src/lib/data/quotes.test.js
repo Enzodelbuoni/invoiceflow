@@ -263,6 +263,8 @@ describe("getQuoteDocument", () => {
       phone: "11999998888",
       website: null,
       address: null,
+      logo_url: null,
+      accent_color: null,
     })
   })
 

@@ -1,5 +1,6 @@
 import { z } from "zod"
 
+import { normalizeAccent } from "@/lib/accent"
 import { formatDocument, formatPhone } from "@/lib/br"
 import { optionalDocument, optionalEmail, optionalPhone, optionalWebsite } from "@/lib/validations/contact"
 import { charLength, optionalText, requiredText } from "@/lib/validations/text"
@@ -34,6 +35,14 @@ export const businessSchema = z.object({
   phone: optionalPhone,
   website: optionalWebsite,
   address: optionalText(300, "O endereço"),
+})
+
+// Cor de destaque (etapa 39): "" = o índigo do InvoiceFlow (null no banco).
+export const accentSchema = z.object({
+  accent_color: z
+    .string()
+    .refine((value) => !value.trim() || normalizeAccent(value), { error: "Escolha uma cor válida, como #0f766e." })
+    .transform((value) => normalizeAccent(value)),
 })
 
 export const EMPTY_BUSINESS_FORM = Object.freeze({
