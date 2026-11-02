@@ -1,5 +1,5 @@
 // Rotas da área privada (exigem login) e telas que só fazem sentido deslogado.
-export const PROTECTED_PREFIXES = ["/dashboard", "/clients", "/services", "/quotes", "/settings"]
+export const PROTECTED_PREFIXES = ["/dashboard", "/clients", "/services", "/quotes", "/templates", "/settings"]
 export const GUEST_ONLY_PATHS = ["/login", "/signup", "/forgot-password"]
 
 export const DEFAULT_AFTER_LOGIN = "/dashboard"

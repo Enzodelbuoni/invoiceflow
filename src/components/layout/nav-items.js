@@ -1,6 +1,7 @@
 import {
   FileTextIcon,
   LayoutDashboardIcon,
+  LayoutTemplateIcon,
   PackageIcon,
   SettingsIcon,
   UsersIcon,
@@ -18,6 +19,7 @@ export const NAV_GROUPS = [
     label: "Gestão",
     items: [
       { title: "Orçamentos", href: "/quotes", icon: FileTextIcon },
+      { title: "Modelos", href: "/templates", icon: LayoutTemplateIcon },
       { title: "Clientes", href: "/clients", icon: UsersIcon },
       { title: "Serviços", href: "/services", icon: PackageIcon },
     ],

@@ -9,6 +9,7 @@ import {
   DownloadIcon,
   EllipsisIcon,
   ExternalLinkIcon,
+  LayoutTemplateIcon,
   LinkIcon,
   PencilLineIcon,
   PrinterIcon,
@@ -33,8 +34,9 @@ import { useDuplicateQuote } from "@/hooks/use-duplicate-quote"
  * Sprint 12): rascunho → editar, enviar, excluir; enviado/visualizado →
  * compartilhar (Sprint 17: link, WhatsApp, e-mail; abre sozinho depois do
  * envio), copiar link e cancelar; fora do rascunho → abrir a página do cliente;
- * qualquer status → duplicar como novo rascunho (Sprint 13) e imprimir; com
- * documento público (nem rascunho nem cancelada) → baixar o PDF (Sprint 16).
+ * qualquer status → duplicar como novo rascunho (Sprint 13), salvar como modelo
+ * (etapa 40) e imprimir; com documento público (nem rascunho nem cancelada)
+ * → baixar o PDF (Sprint 16).
  * Cada mudança de status passa por uma confirmação e por uma função do banco
  * que confere o status de novo. Os diálogos são os mesmos da lista
  * (QuoteActionDialogs).
@@ -47,7 +49,7 @@ import { useDuplicateQuote } from "@/hooks/use-duplicate-quote"
  */
 export function QuoteActions({ quote, client, today, pdfAvailable = false }) {
   const router = useRouter()
-  const [dialog, setDialog] = useState(null) // "send" | "share" | "share-sent" | "cancel" | "delete" | null
+  const [dialog, setDialog] = useState(null) // "send" | "share" | "share-sent" | "cancel" | "delete" | "template" | null
   const { duplicate, pending: duplicating } = useDuplicateQuote()
   const isDraft = quote.status === "draft"
   const isOpen = quote.status === "sent" || quote.status === "viewed"
@@ -79,7 +81,7 @@ export function QuoteActions({ quote, client, today, pdfAvailable = false }) {
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon" className="size-10">
+          <Button id="quote-more-actions" variant="outline" size="icon" className="size-10">
             <EllipsisIcon />
             <span className="sr-only">Mais ações do orçamento {quote.quote_number}</span>
           </Button>
@@ -102,6 +104,10 @@ export function QuoteActions({ quote, client, today, pdfAvailable = false }) {
           <DropdownMenuItem disabled={duplicating} onSelect={() => duplicate(quote)}>
             <CopyIcon />
             Duplicar como novo rascunho
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setDialog("template")}>
+            <LayoutTemplateIcon />
+            Salvar como modelo
           </DropdownMenuItem>
           {canDownloadPdf && (
             <DropdownMenuItem onSelect={() => downloadQuotePdf(quote)}>
@@ -138,7 +144,13 @@ export function QuoteActions({ quote, client, today, pdfAvailable = false }) {
         onDialogChange={setDialog}
         onDeleted={() => router.push("/quotes")}
         // O "Compartilhar" também abre sem gatilho (depois do envio): o foco volta ao botão dele.
-        returnFocus={{ share: "quote-share-trigger" }}
+        // Os abertos pelo menu voltam ao "⋯" (o item do menu já sumiu; sem isso, o foco ia para a página).
+        returnFocus={{
+          share: "quote-share-trigger",
+          template: "quote-more-actions",
+          cancel: "quote-more-actions",
+          delete: "quote-more-actions",
+        }}
       />
     </>
   )

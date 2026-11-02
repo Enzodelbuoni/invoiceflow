@@ -9,6 +9,7 @@ import {
   EllipsisIcon,
   ExternalLinkIcon,
   FileTextIcon,
+  LayoutTemplateIcon,
   LinkIcon,
   PencilLineIcon,
   SendIcon,
@@ -110,6 +111,10 @@ export function QuoteRowActions({ quote, client, today, pdfAvailable = false, tr
           <DropdownMenuItem disabled={duplicating} onSelect={() => duplicate(quote)}>
             <CopyIcon />
             Duplicar como novo rascunho
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setDialog("template")}>
+            <LayoutTemplateIcon />
+            Salvar como modelo
           </DropdownMenuItem>
           {(isDraft || isOpen) && <DropdownMenuSeparator />}
           {isDraft && (

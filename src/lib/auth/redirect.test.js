@@ -8,6 +8,7 @@ describe("isProtectedPath", () => {
     ["/quotes", true],
     ["/quotes/123/edit", true],
     ["/clients/abc", true],
+    ["/templates", true],
     // Página pública da proposta: o cliente abre sem conta (Sprint 14).
     ["/quote/6f1c1d2e-0000-4000-8000-000000000001", false],
     ["/quotesx", false],

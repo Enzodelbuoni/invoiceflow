@@ -6,6 +6,7 @@ import { toast } from "sonner"
 
 import { cancelQuoteAction, deleteQuoteAction, sendQuoteAction } from "@/actions/quotes"
 import { ShareQuoteDialog } from "@/components/quotes/share-quote-dialog"
+import { SaveTemplateDialog } from "@/components/templates/save-template-dialog"
 import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog"
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog"
 import { formatIsoDateShort } from "@/lib/dates"
@@ -16,7 +17,7 @@ import { publicQuoteUrl } from "@/lib/share"
 
 // Ações de um orçamento que a página dele (QuoteActions) e cada linha da lista
 // (QuoteRowActions) compartilham: copiar o link, baixar o PDF e os diálogos de
-// enviar, compartilhar, cancelar e excluir.
+// enviar, compartilhar, cancelar, excluir e salvar como modelo.
 
 /** Copia o link da proposta, com aviso (e o link no aviso, se a cópia falhar). */
 export async function copyQuoteLink(quote) {
@@ -71,7 +72,7 @@ function SendSummary({ quote, clientName, validityPassed }) {
 /**
  * Os diálogos das ações de um orçamento, controlados por quem os usa.
  * `dialog`: o que está aberto ("send" | "share" | "share-sent" | "cancel" |
- * "delete" | null). Enviar abre em seguida o "Compartilhar" ("share-sent"):
+ * "delete" | "template" | null). Enviar abre em seguida o "Compartilhar" ("share-sent"):
  * enviar só trava o documento, o passo seguinte é mandar o link.
  * `returnFocus`: id do elemento que recebe o foco quando cada diálogo fecha,
  * por diálogo ({ share: "…" }) ou para todos ({ default: "…" }), e um
@@ -152,6 +153,13 @@ export function QuoteActionDialogs({ quote, client, today, dialog, onDialogChang
           onDeleted?.()
         }}
         onCloseAutoFocus={focusBack("delete")}
+      />
+
+      <SaveTemplateDialog
+        open={dialog === "template"}
+        onOpenChange={close}
+        quote={quote}
+        onCloseAutoFocus={focusBack("template")}
       />
     </>
   )

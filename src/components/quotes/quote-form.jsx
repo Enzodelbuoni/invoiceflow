@@ -17,11 +17,12 @@ import { QuoteNotes } from "@/components/quotes/quote-notes"
 import { QuotePreviewDialog } from "@/components/quotes/quote-preview-dialog"
 import { QuoteSection } from "@/components/quotes/quote-section"
 import { QuoteSummary } from "@/components/quotes/quote-summary"
+import { QuoteTemplateBar } from "@/components/quotes/quote-template-bar"
 import { QuoteTotalBar } from "@/components/quotes/quote-total-bar"
 import { useQuoteDraft } from "@/hooks/use-quote-draft"
 import { isSessionExpired, runAction } from "@/lib/action-client"
 import { countErrors, firstErrorPath } from "@/lib/form-errors"
-import { quoteDraftKey } from "@/lib/quote-draft"
+import { hasDraftContent, quoteDraftKey } from "@/lib/quote-draft"
 import { previewQuoteFromForm } from "@/lib/quote-preview"
 import { createEmptyQuoteForm, createQuoteSchema, toQuoteFormValues } from "@/lib/validations/quote"
 
@@ -54,6 +55,15 @@ function preventImplicitSubmit(event) {
   if (target instanceof HTMLInputElement && event.currentTarget.contains(target)) event.preventDefault()
 }
 
+/** Endereço do "Novo orçamento" com o modelo e o cliente já escolhidos (os dois opcionais). */
+function newQuoteHref({ templateId, clientId }) {
+  const params = new URLSearchParams()
+  if (templateId) params.set("modelo", templateId)
+  if (clientId) params.set("cliente", clientId)
+  const query = params.toString()
+  return query ? `/quotes/new?${query}` : "/quotes/new"
+}
+
 /**
  * Lista do servidor + registros cadastrados pelos diálogos rápidos. A action
  * revalida a página e a lista do servidor passa a incluí-los, mas até lá eles
@@ -82,26 +92,32 @@ function useOptionsWithCreated(options) {
  * falhar; ela é apagada quando o orçamento é salvo.
  * Com `quote`, edita um rascunho já salvo (mesma tela, valores do banco, uma
  * cópia local própria deste orçamento).
+ * Num orçamento novo, a barra de modelos (etapa 40) deixa começar a partir de
+ * um modelo; com `template`, o formulário já começa preenchido com ele.
  * @param {{ today: string, userId: string,
  *   clients: Array<{ id: string, name: string, company: string|null, email: string|null }>,
  *   services: Array<{ id: string, name: string, description: string|null, unit: string, price_cents: number }>,
  *   issuer: { name: string, email?: string|null, phone?: string|null },
  *   quote?: { id: string, quote_number: string, created_at: string, updated_at: string },
- *   initialClientId?: string }} props
+ *   initialClientId?: string,
+ *   templates?: Array<{ id: string, name: string, title: string|null, itemCount: number, totalCents: number|null }>,
+ *   template?: { id: string, name: string, values: object } | null }} props
  *   `today` ("AAAA-MM-DD") calculado no servidor; `userId` separa os rascunhos locais por conta;
  *   `clients` para o seletor; `services` para o catálogo; `issuer` (getIssuer) para a
  *   pré-visualização; `quote` (getQuote) na edição; `initialClientId`: orçamento novo já
- *   com o cliente escolhido (vindo da página do cliente).
+ *   com o cliente escolhido (vindo da página do cliente); `templates`: modelos para a barra;
+ *   `template`: o modelo aplicado, com os valores de partida já montados no servidor
+ *   (templateToQuoteFormValues).
  */
-export function QuoteForm({ today, userId, clients, services, issuer, quote, initialClientId }) {
+export function QuoteForm({ today, userId, clients, services, issuer, quote, initialClientId, templates = [], template = null }) {
   const editing = Boolean(quote)
   const schema = useMemo(() => createQuoteSchema({ today }), [today])
-  // Versão de partida: o orçamento em branco ou a versão salva. Memorizada,
-  // porque o rascunho local compara cada alteração com ela.
-  const baseValues = useMemo(
-    () => (quote ? toQuoteFormValues(quote) : createEmptyQuoteForm({ today, clientId: initialClientId })),
-    [quote, today, initialClientId],
-  )
+  // Versão de partida: o orçamento em branco, o modelo aplicado ou a versão
+  // salva. Memorizada, porque o rascunho local compara cada alteração com ela.
+  const baseValues = useMemo(() => {
+    if (quote) return toQuoteFormValues(quote)
+    return template?.values ?? createEmptyQuoteForm({ today, clientId: initialClientId })
+  }, [quote, template, today, initialClientId])
   const form = useForm({
     resolver: zodResolver(schema),
     mode: "onTouched",
@@ -227,6 +243,21 @@ export function QuoteForm({ today, userId, clients, services, issuer, quote, ini
           />
         )}
       </AnimatePresence>
+
+      {!editing && (templates.length > 0 || template) && (
+        <QuoteTemplateBar
+          templates={templates}
+          current={template && { id: template.id, name: template.name }}
+          // O cliente escolhido vai junto para o novo formulário: só ele mudado não pede confirmação.
+          hasChanges={() => hasDraftContent({ ...form.getValues(), client_id: baseValues.client_id }, baseValues)}
+          hrefFor={(templateId) => newQuoteHref({ templateId, clientId: form.getValues("client_id") })}
+          // Trocar de modelo substitui o formulário (já confirmado): a cópia local dele sai junto.
+          // Com o aviso "Recuperar / Descartar" ainda aberto, a cópia antiga fica para o próximo.
+          onLeave={() => {
+            if (!draft.pendingDraft) draft.forget()
+          }}
+        />
+      )}
 
       <form
         noValidate
