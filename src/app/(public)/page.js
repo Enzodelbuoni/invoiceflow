@@ -1,4 +1,7 @@
+import { ClientExperience } from "@/components/landing/client-experience"
+import { Faq } from "@/components/landing/faq"
 import { Features } from "@/components/landing/features"
+import { FinalCta } from "@/components/landing/final-cta"
 import { Hero } from "@/components/landing/hero"
 import { HowItWorks } from "@/components/landing/how-it-works"
 import { LandingFooter } from "@/components/landing/landing-footer"
@@ -26,6 +29,9 @@ export default function Home() {
         <Hero quote={quote} />
         <HowItWorks quote={quote} />
         <Features quote={quote} />
+        <ClientExperience quote={quote} />
+        <Faq />
+        <FinalCta />
       </main>
       <LandingFooter />
     </>

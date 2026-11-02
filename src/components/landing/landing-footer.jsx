@@ -10,7 +10,7 @@ const LINK_CLASS =
 export function LandingFooter() {
   return (
     <footer className="border-t">
-      <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-10 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+      <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex flex-col gap-3">
           <Link href="/" className="flex w-fit items-center gap-2.5 rounded-lg" aria-label="InvoiceFlow, página inicial">
             <LogoMark />

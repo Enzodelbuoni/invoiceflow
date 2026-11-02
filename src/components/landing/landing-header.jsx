@@ -8,11 +8,13 @@ import { Button } from "@/components/ui/button"
 export const LANDING_NAV = Object.freeze([
   { id: "como-funciona", label: "Como funciona" },
   { id: "recursos", label: "Recursos" },
+  { id: "para-o-cliente", label: "Para o cliente" },
+  { id: "perguntas", label: "Perguntas" },
 ])
 
 /**
  * Cabeçalho fixo da página inicial: marca, atalhos para as seções (a partir
- * do tablet), tema, "Entrar" e "Criar conta". Quem já está logado e clica em
+ * de 1024 px), tema, "Entrar" e "Criar conta". Quem já está logado e clica em
  * "Entrar" vai direto para o painel (o proxy redireciona).
  */
 export function LandingHeader() {
@@ -24,7 +26,7 @@ export function LandingHeader() {
           <LogoWordmark />
         </Link>
 
-        <nav aria-label="Seções da página" className="hidden md:block">
+        <nav aria-label="Seções da página" className="hidden lg:block">
           <ul className="flex items-center gap-1 text-sm">
             {LANDING_NAV.map(({ id, label }) => (
               <li key={id}>
