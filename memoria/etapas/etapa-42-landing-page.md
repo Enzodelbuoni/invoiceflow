@@ -28,7 +28,7 @@ A página inicial `/` deixou de ser provisória. De cima para baixo:
 
 ## Problema encontrado (não corrigido nesta etapa)
 
-**Desde a etapa 33, todas as rotas do app são dinâmicas (ƒ), até `/forgot-password`, `/_not-found` e `/design-system`.** Causa confirmada: o 404 geral (`app/not-found.js`) chama `getCurrentUser()` (cookies) e o Next monta esse 404 junto de toda página; o `try/catch` em volta engole o erro, mas a rota já foi marcada como dinâmica. Teste: com a verificação desligada, essas rotas voltaram a ser estáticas (○). A landing contorna com `force-static`. **Correção proposta para a etapa 46 (desempenho):** 404 geral sem ler cookies no servidor (por exemplo, decidir "Ir para o painel" × "Entrar" no navegador). Funciona normalmente hoje; só gasta mais servidor a cada acesso.
+**Desde a etapa 33, todas as rotas do app são dinâmicas (ƒ), até `/forgot-password`, `/_not-found` e `/design-system`.** Causa confirmada: o 404 geral (`app/not-found.js`) chama `getCurrentUser()` (cookies) e o Next monta esse 404 junto de toda página; o `try/catch` em volta engole o erro, mas a rota já foi marcada como dinâmica. Teste: com a verificação desligada, essas rotas voltaram a ser estáticas (○). A landing contorna com `force-static`. **Correção na etapa 46 (desempenho), antes do Lighthouse:** 404 geral sem ler cookies no servidor, decidindo "Ir para o painel" × "Entrar" no navegador. Plano passo a passo na `MEMORIA.md` ("Próximo passo", item 46). Funciona normalmente hoje; só gasta mais servidor a cada acesso.
 
 ## Código
 
