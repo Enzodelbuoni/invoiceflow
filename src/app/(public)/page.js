@@ -11,6 +11,9 @@ import { sampleQuote } from "@/components/landing/sample-quote"
 // Página estática, refeita uma vez por dia: as datas da proposta de exemplo
 // (enviada hoje, válida por 15 dias) acompanham.
 export const revalidate = 86400
+// Sem isto a rota sai dinâmica: o 404 geral (app/not-found.js) olha a sessão
+// (cookies) e o Next o monta junto de toda página. Aqui ele não aparece.
+export const dynamic = "force-static"
 
 /** Página inicial (etapa 42): apresentação do InvoiceFlow, benefícios e chamadas para criar conta. */
 export default function Home() {
