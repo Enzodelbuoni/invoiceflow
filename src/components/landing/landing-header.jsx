@@ -5,7 +5,10 @@ import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { Button } from "@/components/ui/button"
 
 /** Seções da página inicial no menu do topo (âncoras). */
-export const LANDING_NAV = Object.freeze([{ id: "como-funciona", label: "Como funciona" }])
+export const LANDING_NAV = Object.freeze([
+  { id: "como-funciona", label: "Como funciona" },
+  { id: "recursos", label: "Recursos" },
+])
 
 /**
  * Cabeçalho fixo da página inicial: marca, atalhos para as seções (a partir

@@ -1,3 +1,4 @@
+import { Features } from "@/components/landing/features"
 import { Hero } from "@/components/landing/hero"
 import { HowItWorks } from "@/components/landing/how-it-works"
 import { LandingFooter } from "@/components/landing/landing-footer"
@@ -24,6 +25,7 @@ export default function Home() {
       <main id="conteudo" tabIndex={-1} className="flex-1 outline-none">
         <Hero quote={quote} />
         <HowItWorks quote={quote} />
+        <Features quote={quote} />
       </main>
       <LandingFooter />
     </>
