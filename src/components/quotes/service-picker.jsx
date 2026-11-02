@@ -46,9 +46,10 @@ function filterServices(value, search, keywords = []) {
  *   onServiceCreated: (service: object) => void,
  *   onAdded: () => void,
  *   children: (renderTrigger: (props: object) => React.ReactNode) => React.ReactNode,
+ *   noun?: "orçamento" | "modelo",          onde o item entra (textos para leitores de tela e do diálogo)
  * }} props
  */
-export function ServicePicker({ services, getUsedServiceIds, onPick, onServiceCreated, onAdded, children }) {
+export function ServicePicker({ services, getUsedServiceIds, onPick, onServiceCreated, onAdded, children, noun = "orçamento" }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [used, setUsed] = useState(() => new Set())
@@ -160,7 +161,7 @@ export function ServicePicker({ services, getUsedServiceIds, onPick, onServiceCr
                         {service.description && (
                           <span className="truncate text-xs text-muted-foreground">{service.description}</span>
                         )}
-                        {inQuote && <span className="sr-only"> (já está no orçamento)</span>}
+                        {inQuote && <span className="sr-only"> (já está no {noun})</span>}
                       </span>
                       <span className="flex shrink-0 flex-col items-end">
                         <span className="tabular-nums">{formatCurrency(service.price_cents)}</span>
@@ -194,6 +195,7 @@ export function ServicePicker({ services, getUsedServiceIds, onPick, onServiceCr
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         defaultName={dialogName}
+        noun={noun}
         onCloseAutoFocus={handleDialogCloseAutoFocus}
         onCreated={(service) => {
           onServiceCreated(service)

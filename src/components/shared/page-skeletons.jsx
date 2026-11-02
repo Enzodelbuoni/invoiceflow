@@ -82,3 +82,43 @@ export function FormSkeleton({ sections }) {
     </div>
   )
 }
+
+/** Uma seção numerada do construtor (QuoteSection): cabeçalho + `lines` campos. */
+function BuilderSectionSkeleton({ lines }) {
+  return (
+    <div className="rounded-2xl border bg-card">
+      <div className="flex items-center gap-3.5 border-b px-5 py-4 sm:px-6">
+        <Skeleton className="size-6 rounded-full" />
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-3 w-56 max-w-full" />
+        </div>
+      </div>
+      <div className="flex flex-col gap-3 p-5 sm:p-6">
+        {Array.from({ length: lines }, (_, i) => (
+          <Skeleton key={i} className="h-10 w-full" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Imita o construtor de orçamentos e o editor de modelos: seções numeradas à
+ * esquerda e o resumo à direita (mesma grade por container query do QuoteForm).
+ * `sections`: quantos campos cada seção mostra.
+ */
+export function BuilderSkeleton({ sections }) {
+  return (
+    <div className="@container">
+      <div className="grid grid-cols-1 items-start gap-6 @4xl:grid-cols-[minmax(0,1fr)_20rem] @6xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="flex flex-col gap-6">
+          {sections.map((lines, index) => (
+            <BuilderSectionSkeleton key={index} lines={lines} />
+          ))}
+        </div>
+        <Skeleton className="h-96 rounded-2xl" />
+      </div>
+    </div>
+  )
+}

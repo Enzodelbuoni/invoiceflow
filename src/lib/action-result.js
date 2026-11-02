@@ -11,6 +11,11 @@ import { logError } from "@/lib/safe-log"
 
 const UNEXPECTED = "Algo deu errado. Tente novamente em instantes."
 
+/** Data/hora ISO vinda do navegador (ex.: o updated_at lido ao abrir uma edição). */
+export function isTimestamp(value) {
+  return typeof value === "string" && value.length <= 40 && !Number.isNaN(Date.parse(value))
+}
+
 /**
  * Revalida a entrada com o schema (a action pode ser chamada direto por POST).
  * Devolve { data } ou { failure } com a primeira mensagem de cada campo.

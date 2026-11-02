@@ -140,7 +140,8 @@ export function toQuoteFormValues(quote) {
 // Schema (Sprint 7)
 // ---------------------------------------------------------------------------
 
-const quoteItemSchema = z
+/** Item (do orçamento e do modelo): campos de texto → formato do banco. */
+export const quoteItemSchema = z
   .object({
     service_id: z
       .string()
@@ -194,88 +195,53 @@ const taxRateSchema = basisPointsFromText({
   maxError: "A alíquota pode ser no máximo 100%.",
 })
 
-/**
- * Schema do orçamento (Sprint 7): valida o formulário (React Hook Form) e será
- * revalidado na Server Action de salvar (Sprint 10). Recebe `today`
- * ("AAAA-MM-DD", do servidor) por causa da regra de validade.
- *
- * Saída no formato do banco (valores monetários e afins em INTEIROS):
- * {
- *   client_id, title, description|null, valid_until ("AAAA-MM-DD"),
- *   items: [{ service_id|null, name, description|null, quantity_hundredths, unit, unit_price_cents }],
- *   discount_type: "percent"|"amount"|null,
- *   discount_value: pontos-base (percent) | centavos (amount) | null,
- *   tax_rate_bps: pontos-base | null,
- *   notes|null, terms|null,
- * }
- *
- * Depois da conversão, confere os totais com o motor de cálculos (Sprint 8):
- * desconto fixo ≤ subtotal e o teto de R$ 999.999.999,99 por item e no total.
- * Essa última etapa só roda quando todos os campos já estão válidos.
- */
-export function createQuoteSchema({ today }) {
-  const latest = addDaysIso(today, VALIDITY_MAX_DAYS)
+/** Campos de desconto e imposto do formulário (orçamento e modelo), ainda como texto. */
+export const ADJUSTMENT_FIELDS = Object.freeze({
+  discount_type: z.enum(DISCOUNT_TYPE_VALUES, { error: "Escolha o tipo de desconto." }),
+  discount_value: z.string(),
+  tax_enabled: z.boolean(),
+  tax_rate: z.string(),
+})
 
-  return z
-    .object({
-      client_id: z
-        .string({ error: "Escolha quem vai receber a proposta." })
-        .refine(isUuid, { error: "Escolha quem vai receber a proposta." }),
-      title: requiredText({
-        min: QUOTE_LIMITS.titleMin,
-        max: QUOTE_LIMITS.titleMax,
-        minError: "Dê um título ao orçamento.",
-        maxError: `O título pode ter no máximo ${QUOTE_LIMITS.titleMax} caracteres.`,
-      }),
-      description: optionalText(QUOTE_LIMITS.description, "A descrição"),
-      // Comparar textos "AAAA-MM-DD" equivale a comparar as datas.
-      valid_until: z
-        .string({ error: "Informe até quando a proposta vale." })
-        .min(1, { error: "Informe até quando a proposta vale.", abort: true })
-        .refine(isIsoDate, { error: "Informe uma data válida.", abort: true })
-        .refine((date) => date >= today, { error: "A validade não pode ser antes de hoje.", abort: true })
-        .refine((date) => date <= latest, {
-          error: `A validade pode ser de até 1 ano (${formatIsoDateShort(latest)}).`,
-        }),
-      items: z
-        .array(quoteItemSchema)
-        .min(1, { error: "Adicione pelo menos um item ao orçamento." })
-        .max(QUOTE_LIMITS.items, { error: `O orçamento pode ter no máximo ${QUOTE_LIMITS.items} itens.` }),
-      discount_type: z.enum(DISCOUNT_TYPE_VALUES, { error: "Escolha o tipo de desconto." }),
-      discount_value: z.string(),
-      tax_enabled: z.boolean(),
-      tax_rate: z.string(),
-      notes: optionalText(QUOTE_LIMITS.notes, "As observações"),
-      terms: optionalText(QUOTE_LIMITS.terms, "Os termos"),
-    })
-    // Desconto e imposto: o valor só é validado quando estão ligados, e o erro
-    // aparece no campo de valor.
-    .superRefine((quote, ctx) => {
-      const discountSchema = DISCOUNT_VALUE_SCHEMAS[quote.discount_type]
+/**
+ * Regras de desconto, imposto e totais sobre um z.object com `items` e os
+ * ADJUSTMENT_FIELDS (orçamento e modelo, etapa 41):
+ * 1. o valor do desconto/imposto só é validado quando estão ligados, e o erro
+ *    aparece no campo de valor;
+ * 2. converte para o formato do banco (discount_type|null, discount_value|null,
+ *    tax_rate_bps|null);
+ * 3. confere os totais com o motor de cálculos (Sprint 8): desconto fixo ≤
+ *   subtotal e o teto de R$ 999.999.999,99 por item e no total. Essa etapa só
+ *   roda quando todos os campos já estão válidos.
+ */
+export function withAdjustmentsAndTotals(objectSchema) {
+  return objectSchema
+    .superRefine((values, ctx) => {
+      const discountSchema = DISCOUNT_VALUE_SCHEMAS[values.discount_type]
       if (discountSchema) {
-        const result = discountSchema.safeParse(quote.discount_value)
+        const result = discountSchema.safeParse(values.discount_value)
         if (!result.success) {
           ctx.addIssue({ code: "custom", path: ["discount_value"], message: result.error.issues[0].message })
         }
       }
-      if (quote.tax_enabled) {
-        const result = taxRateSchema.safeParse(quote.tax_rate)
+      if (values.tax_enabled) {
+        const result = taxRateSchema.safeParse(values.tax_rate)
         if (!result.success) {
           ctx.addIssue({ code: "custom", path: ["tax_rate"], message: result.error.issues[0].message })
         }
       }
     })
-    .transform(({ discount_type, discount_value, tax_enabled, tax_rate, ...quote }) => {
+    .transform(({ discount_type, discount_value, tax_enabled, tax_rate, ...values }) => {
       const discountSchema = DISCOUNT_VALUE_SCHEMAS[discount_type]
       return {
-        ...quote,
+        ...values,
         discount_type: discountSchema ? discount_type : null,
         discount_value: discountSchema ? discountSchema.parse(discount_value) : null,
         tax_rate_bps: tax_enabled ? taxRateSchema.parse(tax_rate) : null,
       }
     })
-    .superRefine((quote, ctx) => {
-      const totals = calculateQuoteTotals(quote)
+    .superRefine((values, ctx) => {
+      const totals = calculateQuoteTotals(values)
       const limit = formatCurrency(MAX_TOTAL_CENTS)
       // Os caminhos apontam para os campos do FORMULÁRIO (unit_price, não unit_price_cents).
       totals.itemSubtotals.forEach((subtotal, index) => {
@@ -301,4 +267,58 @@ export function createQuoteSchema({ today }) {
         ctx.addIssue({ code: "custom", path: ["tax_rate"], message: `Com o imposto, o total passa do limite de ${limit}.` })
       }
     })
+}
+
+/**
+ * Schema do orçamento (Sprint 7): valida o formulário (React Hook Form) e será
+ * revalidado na Server Action de salvar (Sprint 10). Recebe `today`
+ * ("AAAA-MM-DD", do servidor) por causa da regra de validade.
+ *
+ * Saída no formato do banco (valores monetários e afins em INTEIROS):
+ * {
+ *   client_id, title, description|null, valid_until ("AAAA-MM-DD"),
+ *   items: [{ service_id|null, name, description|null, quantity_hundredths, unit, unit_price_cents }],
+ *   discount_type: "percent"|"amount"|null,
+ *   discount_value: pontos-base (percent) | centavos (amount) | null,
+ *   tax_rate_bps: pontos-base | null,
+ *   notes|null, terms|null,
+ * }
+ *
+ * Depois da conversão, confere os totais com o motor de cálculos (Sprint 8):
+ * desconto fixo ≤ subtotal e o teto de R$ 999.999.999,99 por item e no total.
+ * Essa última etapa só roda quando todos os campos já estão válidos.
+ */
+export function createQuoteSchema({ today }) {
+  const latest = addDaysIso(today, VALIDITY_MAX_DAYS)
+
+  return withAdjustmentsAndTotals(
+    z.object({
+      client_id: z
+        .string({ error: "Escolha quem vai receber a proposta." })
+        .refine(isUuid, { error: "Escolha quem vai receber a proposta." }),
+      title: requiredText({
+        min: QUOTE_LIMITS.titleMin,
+        max: QUOTE_LIMITS.titleMax,
+        minError: "Dê um título ao orçamento.",
+        maxError: `O título pode ter no máximo ${QUOTE_LIMITS.titleMax} caracteres.`,
+      }),
+      description: optionalText(QUOTE_LIMITS.description, "A descrição"),
+      // Comparar textos "AAAA-MM-DD" equivale a comparar as datas.
+      valid_until: z
+        .string({ error: "Informe até quando a proposta vale." })
+        .min(1, { error: "Informe até quando a proposta vale.", abort: true })
+        .refine(isIsoDate, { error: "Informe uma data válida.", abort: true })
+        .refine((date) => date >= today, { error: "A validade não pode ser antes de hoje.", abort: true })
+        .refine((date) => date <= latest, {
+          error: `A validade pode ser de até 1 ano (${formatIsoDateShort(latest)}).`,
+        }),
+      items: z
+        .array(quoteItemSchema)
+        .min(1, { error: "Adicione pelo menos um item ao orçamento." })
+        .max(QUOTE_LIMITS.items, { error: `O orçamento pode ter no máximo ${QUOTE_LIMITS.items} itens.` }),
+      ...ADJUSTMENT_FIELDS,
+      notes: optionalText(QUOTE_LIMITS.notes, "As observações"),
+      terms: optionalText(QUOTE_LIMITS.terms, "Os termos"),
+    }),
+  )
 }

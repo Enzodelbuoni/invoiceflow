@@ -26,9 +26,12 @@ function describeItem(values, position) {
  * Itens do orçamento (QuoteItems + AddItemButton do plano), com useFieldArray:
  * adicionar do catálogo (snapshot do serviço) ou avulso, mover e remover (com
  * "Desfazer" no aviso). Mudanças na lista são anunciadas para leitores de tela.
- * @param {{ form: object, services: Array<object>, onServiceCreated: (service: object) => void }} props
+ * Também usado no editor de modelos (etapa 41): `noun` = "modelo" troca os
+ * textos ("no modelo", "Itens do modelo"); os dois substantivos são masculinos.
+ * @param {{ form: object, services: Array<object>, onServiceCreated: (service: object) => void,
+ *   noun?: "orçamento" | "modelo" }} props
  */
-export function QuoteItems({ form, services, onServiceCreated }) {
+export function QuoteItems({ form, services, onServiceCreated, noun = "orçamento" }) {
   const { fields, append, insert, move, remove } = useFieldArray({ control: form.control, name: "items" })
   // Os ids do useFieldArray são aleatórios: o servidor e o navegador geram ids
   // diferentes para os itens que já vêm preenchidos (edição). Até montar, os
@@ -72,7 +75,7 @@ export function QuoteItems({ form, services, onServiceCreated }) {
     const index = fields.length
     append(createQuoteItem(service), { shouldFocus: false })
     lastAdded.current = `items.${index}.quantity`
-    setAnnouncement(`“${service.name}” adicionado. ${plural(index + 1)} no orçamento.`)
+    setAnnouncement(`“${service.name}” adicionado. ${plural(index + 1)} no ${noun}.`)
   }
 
   function addBlank() {
@@ -80,7 +83,7 @@ export function QuoteItems({ form, services, onServiceCreated }) {
     const index = fields.length
     append(createQuoteItem(), { shouldFocus: false })
     pendingFocus.current = { id: `items.${index}.name` }
-    setAnnouncement(`Item avulso adicionado. ${plural(index + 1)} no orçamento.`)
+    setAnnouncement(`Item avulso adicionado. ${plural(index + 1)} no ${noun}.`)
   }
 
   function moveItem(from, to, direction) {
@@ -106,7 +109,7 @@ export function QuoteItems({ form, services, onServiceCreated }) {
     // anterior, se era a última); sem itens, para o botão do catálogo.
     const neighbor = fields[index + 1] ?? fields[index - 1]
     pendingFocus.current = neighbor ? { id: `item-${neighbor.id}-remove` } : { trigger: true }
-    setAnnouncement(`${label} removido. ${remaining ? `${plural(remaining)} no orçamento.` : "O orçamento está sem itens."}`)
+    setAnnouncement(`${label} removido. ${remaining ? `${plural(remaining)} no ${noun}.` : `O ${noun} está sem itens.`}`)
 
     const toastId = toast("Item removido", {
       description: label,
@@ -119,13 +122,13 @@ export function QuoteItems({ form, services, onServiceCreated }) {
         onClick: () => {
           const current = form.getValues("items").length
           if (current >= QUOTE_LIMITS.items) {
-            toast.error(`O orçamento já tem o máximo de ${QUOTE_LIMITS.items} itens.`)
+            toast.error(`O ${noun} já tem o máximo de ${QUOTE_LIMITS.items} itens.`)
             return
           }
           const at = Math.min(index, current)
           insert(at, values, { shouldFocus: false })
           pendingFocus.current = { id: `items.${at}.name` }
-          setAnnouncement(`${label} voltou para o orçamento.`)
+          setAnnouncement(`${label} voltou para o ${noun}.`)
         },
       },
     })
@@ -169,6 +172,7 @@ export function QuoteItems({ form, services, onServiceCreated }) {
         getUsedServiceIds={getUsedServiceIds}
         onPick={addFromCatalog}
         onServiceCreated={onServiceCreated}
+        noun={noun}
         onAdded={() => lastAdded.current && document.getElementById(lastAdded.current)?.focus()}
       >
         {(catalogButton) =>
@@ -180,7 +184,7 @@ export function QuoteItems({ form, services, onServiceCreated }) {
                 invalid={Boolean(listError)}
                 description={
                   services.length
-                    ? "Adicione serviços do seu catálogo (nome e preço vêm prontos) ou um item avulso só para este orçamento."
+                    ? `Adicione serviços do seu catálogo (nome e preço vêm prontos) ou um item avulso só para este ${noun}.`
                     : "Seu catálogo está vazio. Cadastre um serviço (ele fica salvo para os próximos orçamentos) ou adicione um item avulso."
                 }
               >
@@ -201,7 +205,7 @@ export function QuoteItems({ form, services, onServiceCreated }) {
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              <ol aria-label="Itens do orçamento" className="flex flex-col gap-3">
+              <ol aria-label={`Itens do ${noun}`} className="flex flex-col gap-3">
                 {fields.map((field, index) => (
                   <QuoteItemRow
                     key={field.id}

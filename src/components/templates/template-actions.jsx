@@ -2,11 +2,9 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { EllipsisIcon, FilePlus2Icon, Trash2Icon } from "lucide-react"
-import { toast } from "sonner"
+import { EllipsisIcon, FilePlus2Icon, PencilLineIcon, Trash2Icon } from "lucide-react"
 
-import { deleteQuoteTemplateAction } from "@/actions/quote-templates"
-import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog"
+import { DeleteTemplateDialog } from "@/components/templates/delete-template-dialog"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -17,8 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 /**
- * Menu "⋯" de cada modelo: usar (orçamento novo a partir dele) e excluir.
- * Excluído, o cartão some: o foco vai para o resumo da lista.
+ * Menu "⋯" de cada modelo: usar (orçamento novo a partir dele), editar e
+ * excluir. Excluído, o cartão some: o foco vai para o resumo da lista.
  * @param {{ template: { id: string, name: string } }} props
  */
 export function TemplateActions({ template }) {
@@ -41,6 +39,12 @@ export function TemplateActions({ template }) {
               Novo orçamento com ele
             </Link>
           </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href={`/templates/${template.id}/edit`}>
+              <PencilLineIcon />
+              Editar modelo
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onSelect={() => setConfirmOpen(true)}>
             <Trash2Icon />
@@ -49,14 +53,10 @@ export function TemplateActions({ template }) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <ConfirmDeleteDialog
+      <DeleteTemplateDialog
+        template={template}
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title={`Excluir o modelo ${template.name}?`}
-        description="Ele sai da sua lista de modelos. Orçamentos já criados com ele não mudam."
-        confirmLabel="Excluir modelo"
-        action={() => deleteQuoteTemplateAction(template.id)}
-        onDeleted={() => toast.success("Modelo excluído", { description: template.name })}
         onCloseAutoFocus={(event) => {
           const target = document.getElementById(triggerId) ?? document.getElementById("templates-summary")
           if (target) {

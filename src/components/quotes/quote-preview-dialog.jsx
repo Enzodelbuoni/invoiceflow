@@ -5,14 +5,26 @@ import { EyeIcon } from "lucide-react"
 import { QuotePreview } from "@/components/quotes/quote-preview"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
+const DEFAULT_DESCRIPTION =
+  "Assim o cliente vai ver a proposta. Nada foi salvo ainda; telefone, documento e endereço do cliente entram no documento salvo."
+
 /**
  * Pré-visualização do construtor: o mesmo documento do orçamento salvo, com o
  * que está no formulário agora (nada é validado nem salvo).
  * @param {{ open: boolean, onOpenChange: (open: boolean) => void,
  *   quote: object | null, client: object | null, issuer: { name: string, email?: string|null, phone?: string|null } }} props
  *   `quote` de previewQuoteFromForm; `client` com o que o seletor conhece (nome, empresa, e-mail).
+ *   `description`: texto embaixo do título (o editor de modelos explica que o cliente entra depois).
  */
-export function QuotePreviewDialog({ open, onOpenChange, quote, client, issuer, returnFocusId = "quote-preview-trigger" }) {
+export function QuotePreviewDialog({
+  open,
+  onOpenChange,
+  quote,
+  client,
+  issuer,
+  returnFocusId = "quote-preview-trigger",
+  description = DEFAULT_DESCRIPTION,
+}) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -29,10 +41,7 @@ export function QuotePreviewDialog({ open, onOpenChange, quote, client, issuer, 
             <EyeIcon aria-hidden="true" className="size-4 text-primary-ink" />
             Pré-visualização
           </DialogTitle>
-          <DialogDescription>
-            Assim o cliente vai ver a proposta. Nada foi salvo ainda; telefone, documento e endereço do cliente entram no
-            documento salvo.
-          </DialogDescription>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <div className="overflow-y-auto bg-muted/50 px-2 py-4 sm:p-8 dark:bg-muted/30">
           {quote && <QuotePreview quote={quote} client={client} issuer={issuer} label="Prévia" />}

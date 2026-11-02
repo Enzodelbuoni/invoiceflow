@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { FileTextIcon, LayoutTemplateIcon } from "lucide-react"
+import { FileTextIcon, LayoutTemplateIcon, PlusIcon } from "lucide-react"
 
 import { PageHeader } from "@/components/layout/page-header"
 import { EmptyState } from "@/components/shared/empty-state"
@@ -11,12 +11,19 @@ export const metadata = { title: "Modelos" }
 
 const DESCRIPTION = "Itens, condições e termos que você repete, prontos para virar uma proposta em segundos."
 
-/** Como criar e usar um modelo (estado vazio). */
-const STEPS = [
-  "Abra um orçamento que você costuma repetir",
-  "No menu ⋯, escolha “Salvar como modelo”",
-  "Em Novo orçamento, comece a partir dele",
-]
+/** Os dois caminhos para ter um modelo (estado vazio). */
+const WAYS = ["Crie do zero com “Criar modelo”", "Ou, num orçamento pronto, use ⋯ → “Salvar como modelo”"]
+
+function NewTemplateButton({ size = "lg", children = "Novo modelo" }) {
+  return (
+    <Button asChild size={size} className="h-10 px-4">
+      <Link href="/templates/new">
+        <PlusIcon data-icon="inline-start" />
+        {children}
+      </Link>
+    </Button>
+  )
+}
 
 export default async function TemplatesPage() {
   const templates = await listQuoteTemplates()
@@ -24,25 +31,26 @@ export default async function TemplatesPage() {
   if (templates.length === 0) {
     return (
       <>
-        <PageHeader title="Modelos" description={DESCRIPTION} />
+        <PageHeader title="Modelos" description={DESCRIPTION} actions={<NewTemplateButton />} />
         <EmptyState
           icon={LayoutTemplateIcon}
           title="Nenhum modelo ainda"
           description="Um modelo guarda os itens, o desconto, os impostos, os textos e o prazo de uma proposta. Você escolhe o cliente na hora de usar."
           footer={
-            <ol className="flex flex-col items-center gap-2 text-sm sm:flex-row sm:gap-5">
-              {STEPS.map((step, index) => (
-                <li key={step} className="flex items-center gap-2">
+            <ul className="flex flex-col items-center gap-2 text-sm sm:flex-row sm:gap-5">
+              {WAYS.map((way, index) => (
+                <li key={way} className="flex items-center gap-2">
                   <span className="flex size-5 shrink-0 items-center justify-center rounded-full border bg-background text-[0.6875rem] font-medium text-foreground tabular-nums">
                     {index + 1}
                   </span>
-                  {step}
+                  {way}
                 </li>
               ))}
-            </ol>
+            </ul>
           }
         >
-          <Button asChild className="h-10 px-4">
+          <NewTemplateButton size="default">Criar modelo</NewTemplateButton>
+          <Button asChild variant="outline" className="h-10 px-4">
             <Link href="/quotes">
               <FileTextIcon data-icon="inline-start" />
               Ver meus orçamentos
@@ -55,12 +63,12 @@ export default async function TemplatesPage() {
 
   return (
     <>
-      <PageHeader title="Modelos" description={DESCRIPTION} />
+      <PageHeader title="Modelos" description={DESCRIPTION} actions={<NewTemplateButton />} />
 
       <div className="flex flex-col gap-4">
         <p id="templates-summary" tabIndex={-1} className="text-sm text-muted-foreground outline-none" aria-live="polite">
-          {templates.length === 1 ? "1 modelo" : `${templates.length} modelos`} · Para criar outro, use “Salvar como
-          modelo” no menu ⋯ de um orçamento.
+          {templates.length === 1 ? "1 modelo" : `${templates.length} modelos`} · Também dá para criar um a partir de um
+          orçamento: ⋯ → “Salvar como modelo”.
         </p>
         {/* Container query: as colunas acompanham a largura da lista (sidebar aberta ou não). */}
         <div className="@container">

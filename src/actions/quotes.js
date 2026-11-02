@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-import { parseInput, toFailure } from "@/lib/action-result"
+import { isTimestamp, parseInput, toFailure } from "@/lib/action-result"
 import { cancelQuote, deleteQuote, duplicateQuote, insertQuote, sendQuote, updateQuote } from "@/lib/data/quotes"
 import { todayIso } from "@/lib/dates"
 import { createQuoteSchema } from "@/lib/validations/quote"
@@ -11,11 +11,6 @@ import { createQuoteSchema } from "@/lib/validations/quote"
 // uma revalida a entrada aqui com o mesmo schema do formulário; os totais são
 // calculados na camada de dados (nunca vêm do navegador).
 // Retorno: { ok: true, id, quoteNumber } ou { ok: false, message, fieldErrors? }.
-
-/** Data/hora ISO vinda do navegador (o updated_at lido ao abrir a edição). */
-function isTimestamp(value) {
-  return typeof value === "string" && value.length <= 40 && !Number.isNaN(Date.parse(value))
-}
 
 export async function createQuoteAction(values) {
   // "Hoje" do servidor (fuso de São Paulo): a mesma regra de validade da tela.

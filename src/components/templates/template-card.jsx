@@ -20,7 +20,7 @@ function quantityLabel(item) {
 /**
  * Cartão de um modelo na lista: nome, título sugerido, os primeiros itens, o
  * que mais ele traz (desconto, impostos, validade, termos), o total estimado
- * e "Usar modelo" (orçamento novo já preenchido com ele).
+ * e "Usar modelo" (orçamento novo já preenchido com ele). O nome leva à edição.
  * @param {{ template: object, index?: number }} props modelo com `items` em ordem
  */
 export function TemplateCard({ template, index = 0 }) {
@@ -40,7 +40,15 @@ export function TemplateCard({ template, index = 0 }) {
           <LayoutTemplateIcon className="size-5" />
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <h2 className="font-display text-[1.375rem] leading-tight wrap-anywhere">{template.name}</h2>
+          <h2 className="font-display text-[1.375rem] leading-tight wrap-anywhere">
+            <Link
+              href={`/templates/${template.id}/edit`}
+              className="rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <span className="sr-only">Editar o modelo </span>
+              {template.name}
+            </Link>
+          </h2>
           <p className="truncate text-sm text-muted-foreground">
             {template.title ? (
               <>

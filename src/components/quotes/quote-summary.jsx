@@ -106,6 +106,78 @@ export function useQuoteTotals(control) {
 }
 
 /**
+ * Números do resumo: subtotal, desconto, impostos e o total ao vivo (pelo
+ * motor de cálculos). `children` vai embaixo do total (a linha da validade).
+ * Compartilhado pelo resumo do orçamento e o do editor de modelos (etapa 41).
+ * @param {{ control: object, totalLabel?: string, children?: React.ReactNode }} props
+ */
+export function SummaryFigures({ control, totalLabel = "Total", children }) {
+  const { input, totals, itemCount, totalText } = useQuoteTotals(control)
+
+  const discountLabel =
+    input.discount_type === DISCOUNT_TYPE.PERCENT ? `Desconto (${formatPercentValue(input.discount_value)})` : "Desconto"
+  const taxLabel = input.tax_rate_bps ? `Impostos (${formatPercentValue(input.tax_rate_bps)})` : "Impostos"
+
+  return (
+    <>
+      <dl className="flex flex-col gap-2.5 px-5 py-4 text-sm">
+        <SummaryRow label={itemCount ? `Subtotal (${plural(itemCount)})` : "Subtotal"} cents={totals.subtotal} />
+        <SummaryRow
+          label={discountLabel}
+          sign="−"
+          cents={totals.discountTotal}
+          active={Boolean(input.discount_type)}
+          note={totals.discountExceedsSubtotal ? "O desconto digitado passa do subtotal." : null}
+        />
+        <SummaryRow label={taxLabel} sign="+" cents={totals.taxTotal} active={Boolean(input.tax_rate_bps)} />
+      </dl>
+
+      <div className="flex flex-col gap-1 border-t bg-muted/40 px-5 py-4 dark:bg-muted/20">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <span className="text-sm font-medium">{totalLabel}</span>
+          <AnimatedAmount
+            text={totalText}
+            className={cn(
+              "font-display leading-none tabular-nums",
+              totals.total === null ? "text-2xl text-destructive" : totalSizeClass(totalText),
+            )}
+          />
+        </div>
+        {totals.total === null && (
+          <p className="text-xs text-destructive">
+            Os valores passam de {formatCurrency(MAX_TOTAL_CENTS)}. Confira quantidades e preços.
+          </p>
+        )}
+        {children}
+      </div>
+    </>
+  )
+}
+
+/**
+ * Ações do resumo: salvar (envia o formulário: valida tudo, destaca os erros e
+ * foca o primeiro) e pré-visualizar. `#quote-summary-actions` é observado pela
+ * barra do celular (QuoteTotalBar), que some quando estas ações aparecem.
+ * `onPreview(triggerId)`: abre a pré-visualização (o foco volta ao botão ao fechar).
+ * `footer`: linha embaixo das ações.
+ */
+export function SummaryActions({ saving = false, saveLabel, onPreview, footer }) {
+  return (
+    <div id="quote-summary-actions" className="flex flex-col gap-2 border-t p-5">
+      <Button type="submit" disabled={saving} aria-busy={saving || undefined} className="h-10 shadow-sm">
+        {saving ? <Spinner data-icon="inline-start" aria-hidden="true" /> : <SaveIcon data-icon="inline-start" />}
+        {saving ? "Salvando…" : saveLabel}
+      </Button>
+      <Button id="quote-preview-trigger" type="button" variant="outline" className="h-10" onClick={() => onPreview("quote-preview-trigger")}>
+        <EyeIcon data-icon="inline-start" />
+        Pré-visualizar
+      </Button>
+      {footer}
+    </div>
+  )
+}
+
+/**
  * Resumo financeiro + ações (QuoteSummary e QuoteActions do plano), calculado
  * ao vivo pelo motor de cálculos a partir do que está digitado. Com espaço para
  * duas colunas, fica fixo ao lado do formulário enquanto a página rola; numa
@@ -115,17 +187,11 @@ export function useQuoteTotals(control) {
  * salvo (botão desativado com "Salvando…"). `saveLabel`: texto do botão de
  * salvar ("Salvar rascunho" ou, na edição, "Salvar alterações").
  * `onPreview(triggerId)`: abre a pré-visualização do documento (o foco volta
- * ao botão `triggerId` ao fechar). As ações (`#quote-summary-actions`) são
- * observadas pela barra do celular.
+ * ao botão `triggerId` ao fechar).
  */
 export function QuoteSummary({ control, today, clients, footer, onPreview, saving = false, saveLabel = "Salvar rascunho" }) {
   const [title, clientId] = useWatch({ control, name: ["title", "client_id"] })
   const client = clients.find((option) => option.id === clientId)
-  const { input, totals, itemCount, totalText } = useQuoteTotals(control)
-
-  const discountLabel =
-    input.discount_type === DISCOUNT_TYPE.PERCENT ? `Desconto (${formatPercentValue(input.discount_value)})` : "Desconto"
-  const taxLabel = input.tax_rate_bps ? `Impostos (${formatPercentValue(input.tax_rate_bps)})` : "Impostos"
 
   return (
     <aside
@@ -150,49 +216,11 @@ export function QuoteSummary({ control, today, clients, footer, onPreview, savin
         </p>
       </div>
 
-      <dl className="flex flex-col gap-2.5 px-5 py-4 text-sm">
-        <SummaryRow label={itemCount ? `Subtotal (${plural(itemCount)})` : "Subtotal"} cents={totals.subtotal} />
-        <SummaryRow
-          label={discountLabel}
-          sign="−"
-          cents={totals.discountTotal}
-          active={Boolean(input.discount_type)}
-          note={totals.discountExceedsSubtotal ? "O desconto digitado passa do subtotal." : null}
-        />
-        <SummaryRow label={taxLabel} sign="+" cents={totals.taxTotal} active={Boolean(input.tax_rate_bps)} />
-      </dl>
-
-      <div className="flex flex-col gap-1 border-t bg-muted/40 px-5 py-4 dark:bg-muted/20">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <span className="text-sm font-medium">Total</span>
-          <AnimatedAmount
-            text={totalText}
-            className={cn(
-              "font-display leading-none tabular-nums",
-              totals.total === null ? "text-2xl text-destructive" : totalSizeClass(totalText),
-            )}
-          />
-        </div>
-        {totals.total === null && (
-          <p className="text-xs text-destructive">
-            Os valores passam de {formatCurrency(MAX_TOTAL_CENTS)}. Confira quantidades e preços.
-          </p>
-        )}
+      <SummaryFigures control={control}>
         <ValidityLine control={control} today={today} />
-      </div>
+      </SummaryFigures>
 
-      <div id="quote-summary-actions" className="flex flex-col gap-2 border-t p-5">
-        {/* Envia o formulário: valida tudo (erros destacados e foco no primeiro) e salva na conta. */}
-        <Button type="submit" disabled={saving} aria-busy={saving || undefined} className="h-10 shadow-sm">
-          {saving ? <Spinner data-icon="inline-start" aria-hidden="true" /> : <SaveIcon data-icon="inline-start" />}
-          {saving ? "Salvando…" : saveLabel}
-        </Button>
-        <Button id="quote-preview-trigger" type="button" variant="outline" className="h-10" onClick={() => onPreview("quote-preview-trigger")}>
-          <EyeIcon data-icon="inline-start" />
-          Pré-visualizar
-        </Button>
-        {footer}
-      </div>
+      <SummaryActions saving={saving} saveLabel={saveLabel} onPreview={onPreview} footer={footer} />
     </aside>
   )
 }

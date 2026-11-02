@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
+import { useEffect, useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -19,14 +19,14 @@ import { QuoteSection } from "@/components/quotes/quote-section"
 import { QuoteSummary } from "@/components/quotes/quote-summary"
 import { QuoteTemplateBar } from "@/components/quotes/quote-template-bar"
 import { QuoteTotalBar } from "@/components/quotes/quote-total-bar"
+import { useOptionsWithCreated } from "@/hooks/use-options-with-created"
 import { useQuoteDraft } from "@/hooks/use-quote-draft"
 import { isSessionExpired, runAction } from "@/lib/action-client"
 import { countErrors, firstErrorPath } from "@/lib/form-errors"
+import { preventImplicitSubmit } from "@/lib/form-events"
 import { hasDraftContent, quoteDraftKey } from "@/lib/quote-draft"
 import { previewQuoteFromForm } from "@/lib/quote-preview"
 import { createEmptyQuoteForm, createQuoteSchema, toQuoteFormValues } from "@/lib/validations/quote"
-
-const byName = (a, b) => a.name.localeCompare(b.name, "pt-BR")
 
 // Ordem dos campos na tela, para levar o foco ao primeiro erro. Os ids dos
 // campos são os próprios nomes (o seletor de cliente usa "client_id" no botão
@@ -43,18 +43,6 @@ const FIELD_ORDER = Object.freeze([
   "terms",
 ])
 
-/**
- * Enter num campo de texto não envia o construtor (o envio é só pelo botão):
- * num formulário grande, um Enter sem querer mostraria erros em tudo. Vale só
- * para os campos do próprio formulário: os diálogos de cadastro rápido estão
- * em portais, e o evento chega aqui pela árvore do React, não pela do DOM.
- */
-function preventImplicitSubmit(event) {
-  if (event.key !== "Enter" || event.nativeEvent.isComposing) return
-  const target = event.target
-  if (target instanceof HTMLInputElement && event.currentTarget.contains(target)) event.preventDefault()
-}
-
 /** Endereço do "Novo orçamento" com o modelo e o cliente já escolhidos (os dois opcionais). */
 function newQuoteHref({ templateId, clientId }) {
   const params = new URLSearchParams()
@@ -62,22 +50,6 @@ function newQuoteHref({ templateId, clientId }) {
   if (clientId) params.set("cliente", clientId)
   const query = params.toString()
   return query ? `/quotes/new?${query}` : "/quotes/new"
-}
-
-/**
- * Lista do servidor + registros cadastrados pelos diálogos rápidos. A action
- * revalida a página e a lista do servidor passa a incluí-los, mas até lá eles
- * precisam aparecer (o cliente selecionado, o serviço no catálogo).
- */
-function useOptionsWithCreated(options) {
-  const [created, setCreated] = useState([])
-  const merged = useMemo(() => {
-    const known = new Set(options.map((option) => option.id))
-    const missing = created.filter((option) => !known.has(option.id))
-    return missing.length ? [...options, ...missing].sort(byName) : options
-  }, [options, created])
-  const addCreated = useCallback((option) => setCreated((current) => [...current, option]), [])
-  return [merged, addCreated]
 }
 
 /**

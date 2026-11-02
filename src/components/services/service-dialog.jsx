@@ -118,16 +118,17 @@ function QuickServiceForm({ defaultName, onCreated, onCancel }) {
  * `onCloseAutoFocus`: para onde vai o foco ao fechar (o botão que abriu pode ter sumido).
  * @param {{ open: boolean, onOpenChange: (open: boolean) => void, defaultName?: string,
  *   onCreated: (service: { id: string, name: string, description: string|null, unit: string, price_cents: number }) => void,
- *   onCloseAutoFocus?: (event: Event) => void }} props
+ *   onCloseAutoFocus?: (event: Event) => void, noun?: "orçamento" | "modelo" }} props
+ *   `noun`: onde o serviço entra como item (o editor de modelos usa "modelo").
  */
-export function ServiceDialog({ open, onOpenChange, defaultName = "", onCreated, onCloseAutoFocus }) {
+export function ServiceDialog({ open, onOpenChange, defaultName = "", onCreated, onCloseAutoFocus, noun = "orçamento" }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="gap-6 p-6 sm:max-w-lg" onCloseAutoFocus={onCloseAutoFocus}>
         <DialogHeader>
           <DialogTitle className="font-display text-2xl font-normal">Novo serviço</DialogTitle>
           <DialogDescription>
-            Fica salvo no seu catálogo e já entra como item deste orçamento.
+            Fica salvo no seu catálogo e já entra como item deste {noun}.
           </DialogDescription>
         </DialogHeader>
         <QuickServiceForm
