@@ -347,6 +347,27 @@
   }
 }
 
+/* Página inicial: blocos que entram ao chegar na tela, animados pela própria
+   rolagem (sem JavaScript). Sem suporte no navegador, ou para quem pede menos
+   movimento, ficam parados e visíveis. */
+@keyframes reveal {
+  from {
+    opacity: 0;
+    translate: 0 2rem;
+  }
+}
+
+@utility animate-reveal {
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      animation: reveal linear both;
+      /* Depois do atalho `animation`, que zera a linha do tempo. */
+      animation-timeline: view();
+      animation-range: entry 5% cover 20%;
+    }
+  }
+}
+
 /* Acessibilidade: quem pede menos movimento no sistema não recebe animações. */
 @media (prefers-reduced-motion: reduce) {
   *,

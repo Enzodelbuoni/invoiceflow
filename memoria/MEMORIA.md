@@ -38,7 +38,7 @@ SaaS para freelancers criarem propostas/orçamentos profissionais: clientes, ser
 
 ## Próximo passo
 
-> **Onde paramos (2026-11-02):** etapas 40 (modelos: banco, lista, "Salvar como modelo", usar no construtor) e 41 (editor de modelos) concluídas e commitadas (**não publicadas**: `git push` só quando o usuário pedir). O Supabase estava pausado no início da sessão e o usuário reativou. **Próxima: etapa 42** (landing page). Antes de cada sessão: `git status` limpo, `projects list` (o Supabase pausa após ~7 dias sem uso) e `npm test`.
+> **Onde paramos (2026-11-02):** etapas 40 e 41 concluídas e commitadas (**não publicadas**: `git push` só quando o usuário pedir). **Etapa 42 (landing page) em andamento, em commits parciais** (combinado com o usuário: commits menores, porque a sessão pode acabar sem aviso). Feito: parte 1 — cabeçalho, abertura com a proposta de exemplo (`QuotePreview` real numa janela de navegador, `components/landing/`), "Como funciona" (3 passos) e rodapé. Falta: parte 2 — recursos (grade com os diferenciais); parte 3 — o que o cliente vê, perguntas frequentes e chamada final; parte 4 — conferência (larguras, temas, teclado) e o registro `etapa-42-landing-page.md`. Antes de cada sessão: `git status` limpo, `projects list` (o Supabase pausa após ~7 dias sem uso) e `npm test`.
 
 
 1. **Sprint 22 — seguir a ordem combinada com o usuário em 2026-10-20** ([etapa-36](etapas/etapa-36-levantamento-sprint-22.md)):
